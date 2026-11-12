@@ -1,0 +1,108 @@
+#+title: YK DO52 Pro — QMK config
+#+date: 2026-11-13
+#+filetags: :qmk:do52pro:rp2040:trackpoint:
+
+Minimal QMK keyboard definition for the DO52 Pro (RP2040 split, integrated
+ThinkPad TrackPoint). Only what is needed to build and flash is kept here; the
+QMK checkout itself stays outside this repo.
+
+* Contents
+
+#+begin_src text
+.
+├── build.sh                    build: install keyboard, patch QMK, compile
+├── flash.sh                    wait for RPI-RP2 and copy the UF2
+├── flake.nix / flake.lock      qmk + arm-none-eabi toolchain
+├── keyboards/do52pro/          QMK keyboard definition + default keymap
+├── patches/                    PS/2 PIO pin-order backport
+└── firmware-rp2040/            build output (gitignored)
+#+end_src
+
+* Requirements
+
+- A =qmk_firmware= checkout. Default =QMK_HOME=:
+  =/home/df/archive/raptop/usb/df/projects/qmk_firmware=; override with the
+  environment variable.
+- Nix. =build.sh= re-execs into =nix develop= when =arm-none-eabi-gcc= is not
+  on =PATH=.
+
+* Build
+
+#+begin_src bash
+./build.sh                 # default keymap
+./build.sh dvorak          # other keymap directory
+QMK_HOME=/path/to/qmk_firmware ./build.sh
+#+end_src
+
+The script:
+
+1. symlinks =keyboards/do52pro= into =$QMK_HOME/keyboards/=,
+2. applies =patches/ps2_vendor-either-order.patch= if the checkout does not
+   already support both PS/2 pin orders (current QMK master does),
+3. runs =qmk compile -kb do52pro -km <keymap>=,
+4. copies the UF2 to =firmware-rp2040/do52pro_trackpoint_<keymap>.uf2=.
+
+* Flash
+
+#+begin_src bash
+./flash.sh
+#+end_src
+
+Put one half in BOOTSEL (double-tap RESET, or hold BOOT while plugging USB),
+wait for =RPI-RP2=, and the script copies the UF2. Flash the *same* file to
+both halves.
+
+- USB must be on the **right** half (the TrackPoint side); =MASTER_RIGHT=.
+- Connect the TRRS cable *before* USB. Never hot-plug TRRS while powered.
+- After flashing, unplug/replug USB so the TrackPoint power-cycles.
+
+* Hardware facts
+
+| Item | Value |
+|------+-------|
+| MCU | RP2040 (Pro Micro footprint) |
+| Split link | serial on =GP3=, PIO0 |
+| TrackPoint CLK | =GP22= |
+| TrackPoint DATA | =GP23= |
+| PS/2 PIO block | PIO1 (=PS2_PIO_USE_PIO1=) |
+| PS/2 pull-ups | 2× 4.7 kΩ on the right PCB |
+| Reset RC | 100 kΩ + 2.2 µF on the right PCB |
+| Mount rotation | =PS2_MOUSE_ROTATE 270= (90° mount + 180° axis reversal) |
+
+PIO0 is owned by the split serial driver, which registers the same IRQ vector
+as the PS/2 driver; hence =PS2_PIO_USE_PIO1=.
+
+* Gotchas
+
+** Do not reset the TrackPoint after init
+=ps2_mouse_init()= already performs the full sequence:
+=0xFF= reset → =0xAA= self-test → =0x00= device ID → =0xF4= enable data
+reporting → =0xF0= stream mode. QMK calls =keyboard_post_init_kb()= *after*
+that; sending another =0xFF= there leaves the TrackPoint alive but with data
+reporting disabled, so it never sends a report. The hook in =do52pro.c= must
+not touch PS/2.
+
+** Pin order
+=keyboard.json= uses =clock_pin=GP22=, =data_pin=GP23= (the stock harness).
+This QMK revision's PIO driver only accepted =clock = data + 1=; the patch in
+=patches/= backports the newer driver that accepts either adjacent order.
+No wire swap is needed.
+
+** Buttons
+=MOUSEKEY_ENABLE = yes= is required for =KC_BTN1..3=; =PS2_MOUSE_ENABLE= alone
+only provides pointer motion.
+
+** Debug console
+=CONSOLE_ENABLE= is off in =rules.mk=. Enable it and =qmk console= to see
+=ps2_mouse= diagnostics.
+
+** Single-axis corrections
+=PS2_MOUSE_ROTATE= handles the mount. If only one axis is wrong, use
+=PS2_MOUSE_INVERT_X= or =PS2_MOUSE_INVERT_Y= in =config.h= instead.
+
+* Known-good state
+
+Verified on the right half with =evtest= on =YK do52pro Mouse=: pointer motion
+reports =REL_X=/=REL_Y=, axes match the physical stick, buttons work. The
+default keymap is the 68-key =LAYOUT_5x6= translation of the ZMK do52pro
+keymap (three layers).
