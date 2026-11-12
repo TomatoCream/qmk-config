@@ -15,14 +15,28 @@ QMK checkout itself stays outside this repo.
 ├── flake.nix / flake.lock      qmk + arm-none-eabi toolchain
 ├── keyboards/do52pro/          QMK keyboard definition + default keymap
 ├── patches/                    PS/2 PIO pin-order backport
+├── qmk_firmware/               QMK source (git submodule, pinned)
 └── firmware-rp2040/            build output (gitignored)
 #+end_src
 
+* QMK source
+
+=qmk_firmware/= is a git submodule pinned to the QMK revision this config was
+tested with (=04c2dbd3df=). The submodule working tree is ~1.5 GB; the parent
+repo history stores only the commit pointer.
+
+#+begin_src bash
+git submodule update --init --recursive
+#+end_src
+
+The =vusb= submodule is not needed for the RP2040 build; it may remain
+uninitialized. =build.sh= uses =./qmk_firmware= by default.
+
 * Requirements
 
-- A =qmk_firmware= checkout. Default =QMK_HOME=:
-  =/home/df/archive/raptop/usb/df/projects/qmk_firmware=; override with the
-  environment variable.
+- QMK from the submodule (=./qmk_firmware=). Override with =QMK_HOME= to use a
+  different checkout (the script falls back to the old archive path when the
+  submodule is absent).
 - Nix. =build.sh= re-execs into =nix develop= when =arm-none-eabi-gcc= is not
   on =PATH=.
 
@@ -38,7 +52,8 @@ The script:
 
 1. symlinks =keyboards/do52pro= into =$QMK_HOME/keyboards/=,
 2. applies =patches/ps2_vendor-either-order.patch= if the checkout does not
-   already support both PS/2 pin orders (current QMK master does),
+   already support both PS/2 pin orders (current QMK master does), and reverts
+   it after the build so the submodule stays clean,
 3. runs =qmk compile -kb do52pro -km <keymap>=,
 4. copies the UF2 to =firmware-rp2040/do52pro_trackpoint_<keymap>.uf2=.
 
