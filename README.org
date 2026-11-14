@@ -12,8 +12,10 @@ QMK checkout itself stays outside this repo.
 .
 ├── build.sh                    build: install keyboard, patch QMK, compile
 ├── flash.sh                    wait for RPI-RP2 and copy the UF2
+├── via-export.sh               VIA backup JSON -> keymap.c
 ├── flake.nix / flake.lock      qmk + arm-none-eabi toolchain
-├── keyboards/do52pro/          QMK keyboard definition + default keymap
+├── keyboards/do52pro/          QMK keyboard definition + default/via keymaps
+│   └── via/do52pro.json        VIA draft definition (Design tab)
 ├── patches/                    PS/2 PIO pin-order backport
 ├── qmk_firmware/               QMK source (git submodule, pinned)
 └── firmware-rp2040/            build output (gitignored)
@@ -60,7 +62,10 @@ The script:
 * Flash
 
 #+begin_src bash
-./flash.sh
+./flash.sh                 # VIA build if present, else newest UF2
+./flash.sh via             # explicit keymap name
+./flash.sh default         # non-VIA build
+./flash.sh firmware-rp2040/do52pro_trackpoint_via.uf2
 #+end_src
 
 Put one half in BOOTSEL (double-tap RESET, or hold BOOT while plugging USB),
@@ -70,6 +75,63 @@ both halves.
 - USB must be on the **right** half (the TrackPoint side); =MASTER_RIGHT=.
 - Connect the TRRS cable *before* USB. Never hot-plug TRRS while powered.
 - After flashing, unplug/replug USB so the TrackPoint power-cycles.
+
+* VIA
+
+The =via= keymap enables QMK's VIA protocol and dynamic keymap. Build and
+flash it once:
+
+#+begin_src bash
+./build.sh via
+./flash.sh
+#+end_src
+
+Then open <https://usevia.app> in Chromium/Edge (WebHID; on NixOS add
+=pkgs.qmk-udev-rules= to =services.udev.packages=):
+
+1. Settings → *Show Design tab*.
+2. Design → *Load Draft Definition* → =keyboards/do52pro/via/do52pro.json=.
+3. Configure → remap keys. Changes are written to the emulated EEPROM; no
+   recompile or reflash.
+
+The definition's =vendorId= /= =productId= must match =config.h=
+(=0x594B:0x0D52=). VIA gets 4 dynamic layers by default; the C keymap has 3,
+so layer 4 is transparent. =QK_RBT= /= =QK_BOOT= can be entered with VIA's
+*Any* keycode.
+
+** Export back to keymap.c
+
+VIA edits EEPROM, not the C file. Save the layout from VIA's *Save + Load*
+tab, then convert it:
+
+#+begin_src bash
+./via-export.sh ~/Downloads/do52pro.layout.json
+# writes ./keymap.generated.c
+./via-export.sh backup.json keyboards/do52pro/keymaps/default/keymap.c
+# or write straight over the source (review the diff first)
+#+end_src
+
+A live dump of this board is committed at
+=keyboards/do52pro/via/do52pro-live.layout.json=; it works as a converter
+test without the keyboard attached:
+
+#+begin_src bash
+./via-export.sh keyboards/do52pro/via/do52pro-live.layout.json
+#+end_src
+
+The script runs =qmk via2json= then =qmk json2c=: VIA stores layers in matrix
+order (12×6), and =via2json= maps them back to =LAYOUT_5x6= order. The output
+is generated C: comments are gone and the transparent 4th layer is included;
+trim or edit before committing.
+
+** EEPROM
+The dynamic keymap is seeded from =keymap.c= only on first boot. If you change
+the C keymap and reflash, clear EEPROM first. With =MASTER_RIGHT= the master is
+the right half, and Bootmagic's default =[0,0]= is that half's top-left key —
+hold the right half's =6= key (global matrix =[6,0]=) while plugging in. The
+keyboard resets EEPROM and jumps to the RP2040 bootloader. Otherwise the old
+VIA layout stays in the EEPROM. Normal UF2 reflashing does not touch the 8 KB
+wear-leveled EEPROM area at the top of flash.
 
 * Hardware facts
 

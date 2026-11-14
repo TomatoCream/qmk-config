@@ -1,8 +1,8 @@
 #pragma once
 
 // USB Device descriptor parameters
-#define VENDOR_ID    0xFEED  // Valeur par défaut QMK, change si nécessaire
-#define PRODUCT_ID  0x0000  // Valeur par défaut QMK, change si nécessaire
+#define VENDOR_ID    0x594B  // Private VID ("YK"); VIA rejects QMK default 0xFEED
+#define PRODUCT_ID  0x0D52  // Unique : doit correspondre au productId VIA
 #define DEVICE_VER   0x0001  // Version du firmware
 #define MANUFACTURER "YK"
 #define PRODUCT      "do52pro"
