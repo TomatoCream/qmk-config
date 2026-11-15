@@ -5,10 +5,14 @@
 QMK config for the DO52 Pro (RP2040 split, TrackPoint) plus a VIA draft
 definition for the Keychron V10. The QMK checkout is a pinned submodule; only
 the keyboard overlay, keymaps, VIA definitions, and tooling live here.
+The DO52 Pro is the default board: assume it unless a task names the V10.
 
 ## Commands
 
 One entry point: `./kb <command>` (`./kb --help`, `./kb <command> --help`).
+Default target is the DO52 Pro (12×6, USB `0x594B:0x0D52`): `build`, `flash`,
+`export`, `pull`, `dump`, `apply` need no board flags. V10 commands need explicit
+`--vid/--pid/--rows/--cols`.
 
 - `./kb build [keymap]` — symlink the overlay into `qmk_firmware`, apply the PS/2
   patch, compile, copy the UF2 to `firmware-rp2040/`. Keymap defaults to `default`.
@@ -69,13 +73,14 @@ One entry point: `./kb <command>` (`./kb --help`, `./kb <command> --help`).
   differing arguments are replaced, preserving comments, formatting, and
   `process_record_user()`.
 - The dynamic keymap has 4 VIA layers and the C keymap fills all four: 0 =
-  Dvorak base, 1 = symbols, 2 = F-keys/reset (unreachable from 0/1), 3 =
-  QWERTY letter overlay. All four are pulled by `kb pull`.
+  Dvorak base, 1 = F-keys/reset (unreachable from 0/3), 2 = QWERTY letter
+  overlay, 3 = symbols (`MO(3)` on both outer thumb keys). All four are pulled
+  by `kb pull`.
 - Layer 0 is Dvorak (`' , . p y / a o e u i / ; q j k x / f g c r l / d h t n s
-  / b m w v z` on the 30 letter positions). Caps Lock is `TG(3)`, toggling
-  layer 3, which overrides only those 30 letter positions with QWERTY and is
-  `KC_TRNS` elsewhere — never duplicate non-letter keys into layer 3. Raw
-  keycode for VIA's *Any* field: `TG(3)` = `0x5263`.
+  / b m w v z` on the 30 letter positions). `TG(2)` (on the symbols layer)
+  toggles layer 2, which overrides only those 30 letter positions with QWERTY
+  and is `KC_TRNS` elsewhere — never duplicate non-letter keys into layer 2.
+  Raw keycodes for VIA's *Any* field: `TG(2)` = `0x5262`, `MO(3)` = `0x5223`.
 - Raw HID discovery filters USB ID `0x594B:0x0D52`; other VIA keyboards (the
   Keychron V10 at `0x3434:0x03A1`) are ignored.
 - `kb format` replaces comments inside `LAYOUT_5x6(...)` with group
@@ -91,7 +96,7 @@ One entry point: `./kb <command>` (`./kb --help`, `./kb <command> --help`).
   does not clear it; after flashing a `keymap.c` change run
   `./kb dump --reset` (VIA cmd `0x06` over raw HID, no BOOTSEL). A layer only
   present in the C keymap (e.g. the QWERTY overlay) stays all-`KC_TRNS` in the
-  EEPROM until then, so the new `TG(3)` would appear to do nothing — and
+  EEPROM until then, so the new `TG(2)` would appear to do nothing — and
   `kb pull` would write those `KC_TRNS` back into `keymap.c`. Both reseed
   paths discard VIA-only remaps, so run `./kb pull` first to keep them.
   Bootmagic fallback: hold the right half's `6` (`[6,0]`) while plugging in.
