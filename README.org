@@ -12,7 +12,10 @@ QMK checkout itself stays outside this repo.
 .
 ├── build.sh                    build: install keyboard, patch QMK, compile
 ├── flash.sh                    wait for RPI-RP2 and copy the UF2
-├── via-export.sh               VIA backup JSON -> keymap.c
+├── via-export.sh               live VIA EEPROM/backup -> keymap.c
+├── via-dump.py                 VIA raw HID dynamic keymap dumper
+├── via-merge.py                position-diff a generated keymap into keymap.c
+├── via-pull.sh                 dump + patch only changed keymap positions
 ├── format-keymap.py            reflow LAYOUT_5x6 calls into a visual grid
 ├── flake.nix / flake.lock      qmk + arm-none-eabi toolchain
 ├── keyboards/do52pro/          QMK keyboard definition + default keymap
@@ -119,29 +122,54 @@ so layer 4 is transparent. =QK_RBT= /= =QK_BOOT= can be entered with VIA's
 
 ** Export back to keymap.c
 
-VIA edits EEPROM, not the C file. Save the layout from VIA's *Save + Load*
-tab, then convert it:
+VIA edits EEPROM, not the C file. With the keyboard connected, no arguments:
+the script reads the live dynamic keymap over VIA raw HID (usage page
+=0xFF60=) and writes the C table.
 
 #+begin_src bash
-./via-export.sh ~/Downloads/do52pro.layout.json
-# writes ./keymap.generated.c
+./via-export.sh                    # live EEPROM -> ./keymap.generated.c
 ./via-export.sh backup.json keyboards/do52pro/keymaps/default/keymap.c
 # or write straight over the source (review the diff first)
 #+end_src
 
-A live dump of this board is committed at
-=keyboards/do52pro/via/do52pro-live.layout.json=; it works as a converter
-test without the keyboard attached:
+A VIA *Save + Load* backup still works:
+
+#+begin_src bash
+./via-export.sh ~/Downloads/do52pro.layout.json
+#+end_src
+
+A snapshot of the board is committed at
+=keyboards/do52pro/via/do52pro-live.layout.json=; pass it explicitly to test
+the converter without the keyboard attached:
 
 #+begin_src bash
 ./via-export.sh keyboards/do52pro/via/do52pro-live.layout.json
 #+end_src
 
-The script runs =qmk via2json=, =qmk json2c=, then =format-keymap.py=: VIA
-stores layers in matrix order (12×6), =via2json= maps them back to
-=LAYOUT_5x6= order, and the formatter lays the result out on the same grid as
-=keymap.c=. Hand-written comments are still lost and the transparent 4th layer
-is included; trim or edit before committing.
+=via-dump.py= selects the raw HID interface by USB ID (=0x594B:0x0D52=), so
+another VIA keyboard on the same host is ignored. The script runs
+=qmk via2json=, =qmk json2c=, then =format-keymap.py=: VIA stores layers in
+matrix order (12×6), =via2json= maps them back to =LAYOUT_5x6= order, and the
+formatter lays the result out on the same grid as =keymap.c=. Hand-written
+comments are still lost and the transparent 4th layer is included; trim or
+edit before committing.
+
+** Pull dynamic changes into keymap.c
+
+=via-pull.sh= dumps the live EEPROM and patches only the positions whose
+keycode value differs from the C source, leaving comments, formatting outside
+the table, and custom functions alone:
+
+#+begin_src bash
+./via-pull.sh            # apply changed positions
+./via-pull.sh --check    # list them, write nothing
+#+end_src
+
+Positions are =LAYOUT_5x6= argument indices: argument N is the same physical
+key in every layer (the order of =keyboard.json='s layout). Values are
+compared after resolution, so aliases like =KC_LCBR= vs =LSFT(KC_LBRC)= or
+=KC_RIGHT= vs =KC_RGHT= are not treated as changes. Layers beyond the C
+keymap (the transparent 4th VIA layer) are ignored.
 
 ** EEPROM
 The dynamic keymap is seeded from =keymap.c= only on first boot. If you change
