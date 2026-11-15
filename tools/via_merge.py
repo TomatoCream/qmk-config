@@ -86,7 +86,7 @@ def resolve(expr: str, names: dict[str, int], depth: int = 0) -> int | None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="kb merge", description=__doc__)
-    parser.add_argument("generated", nargs="?", default=str(ROOT / "keymap.generated.c"), help="live/generated keymap.c")
+    parser.add_argument("generated", help="live/generated keymap.c")
     parser.add_argument("target", nargs="?", default=str(ROOT / "keyboards/do52pro/keymaps/default/keymap.c"), help="keymap.c to patch")
     parser.add_argument("--qmk-home", default=str(QMK_HOME))
     parser.add_argument("--keyboard-json", default=str(ROOT / "keyboards/do52pro/keyboard.json"))

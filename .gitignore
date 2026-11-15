@@ -4,7 +4,6 @@
 *.uf2
 *.elf
 firmware-rp2040/
-keymap.generated.c*
 
 # OS
 .DS_Store

@@ -144,8 +144,9 @@ the script reads the live dynamic keymap over VIA raw HID (usage page
 =0xFF60=) and writes the C table.
 
 #+begin_src bash
-./kb export                    # live EEPROM -> ./keymap.generated.c
-./kb export backup.json keyboards/do52pro/keymaps/default/keymap.c
+./kb export                    # live EEPROM -> stdout
+./kb export -o out.c           # live EEPROM -> out.c
+./kb export backup.json -o keyboards/do52pro/keymaps/default/keymap.c
 # or write straight over the source (review the diff first)
 #+end_src
 

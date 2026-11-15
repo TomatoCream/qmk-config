@@ -3,11 +3,11 @@
 
     ./kb build [keymap]              compile; UF2 -> firmware-rp2040/
     ./kb flash [keymap|file.uf2]     wait for RPI-RP2 and copy the UF2
-    ./kb export [backup.json] [out]  live EEPROM (or VIA backup) -> keymap.generated.c
+    ./kb export [backup.json] [-o out.c]  live EEPROM (or VIA backup) -> keymap.c
     ./kb pull [--check]              patch changed positions into keymap.c
     ./kb dump ...                    raw EEPROM -> VIA backup JSON (--reset reseeds)
     ./kb apply backup.json ...       VIA backup JSON -> live EEPROM, diff-only
-    ./kb merge [generated] [target]  position-diff a generated keymap into keymap.c
+    ./kb merge generated [target]    position-diff a generated keymap into keymap.c
     ./kb format [--check] files...   reflow LAYOUT_5x6 calls into the table grid
 
 QMK_HOME overrides the qmk_firmware checkout (default: the ./qmk_firmware
@@ -35,7 +35,6 @@ KEYBOARD = "do52pro"
 LAYOUT = "LAYOUT_5x6"
 FIRMWARE_DIR = ROOT / "firmware-rp2040"
 TARGET_KEYMAP = ROOT / "keyboards/do52pro/keymaps/default/keymap.c"
-GENERATED_KEYMAP = ROOT / "keymap.generated.c"
 PS2_DRIVER = "platforms/chibios/drivers/vendor/RP/RP2040/ps2_vendor.c"
 PS2_PATCH = ROOT / "patches/ps2_vendor-either-order.patch"
 
@@ -168,43 +167,60 @@ def cmd_flash(args: argparse.Namespace, argv: list[str]) -> int:
     return 0
 
 
-def cmd_export(args: argparse.Namespace, argv: list[str]) -> int:
-    """VIA backup (or live EEPROM) -> formatted keymap.c via qmk via2json/json2c."""
+def export_keymap(backup: Path | None, out: Path, argv: list[str]) -> int:
+    """VIA backup (or the live EEPROM) -> formatted keymap.c at `out`.
+
+    Everything intermediate stays in a temp dir: qmk json2c renames an
+    existing output to `<out>.bak`, so it never writes to `out` directly.
+    """
     check_qmk_home()
     ensure_tool("qmk", argv)
-    out = Path(args.output).resolve()
-    with tempfile.TemporaryDirectory(prefix="kb-export-") as tmp:
-        if args.backup:
-            backup = Path(args.backup).resolve()
-            if not backup.is_file():
-                fail(f"No such file: {backup}")
-        else:
-            backup = Path(tmp) / "live.layout.json"
+    with tempfile.TemporaryDirectory(prefix="kb-export-") as tmp_dir:
+        tmp = Path(tmp_dir)
+        if backup is None:
+            backup = tmp / "live.layout.json"
             if via_dump.main(["--qmk-home", str(QMK_HOME), "-o", str(backup)]):
                 return 1
-        keymap_json = Path(tmp) / "keymap.json"
+        elif not backup.is_file():
+            fail(f"No such file: {backup}")
+        keymap_json = tmp / "keymap.json"
+        keymap_c = tmp / "keymap.c"
         # qmk resolves the keyboard (keyboard.json, matrix size) from inside the
         # tree and only exposes via2json/json2c when run from the QMK root.
         with keyboard_linked():
             run("qmk", "via2json", "-q", "-kb", KEYBOARD, "-km", "default", "-l", LAYOUT,
-                "-o", keymap_json, backup, cwd=QMK_HOME, quiet=args.quiet)
-            run("qmk", "json2c", "-q", "-o", out, keymap_json, cwd=QMK_HOME, quiet=args.quiet)
-    if args.quiet:
+                "-o", keymap_json, backup, cwd=QMK_HOME, quiet=True)
+            run("qmk", "json2c", "-q", "-o", keymap_c, keymap_json, cwd=QMK_HOME, quiet=True)
         with open(os.devnull, "w") as devnull, contextlib.redirect_stdout(devnull):
-            format_keymap.main([str(out)])
-    else:
-        format_keymap.main([str(out)])
-        print(f"Wrote {out}")
+            format_keymap.main([str(keymap_c)])
+        shutil.copyfile(keymap_c, out)
     return 0
 
 
+def cmd_export(args: argparse.Namespace, argv: list[str]) -> int:
+    backup = Path(args.backup).resolve() if args.backup else None
+    if args.output:
+        out = Path(args.output).resolve()
+        status = export_keymap(backup, out, argv)
+        if not status:
+            print(f"Wrote {out}", file=sys.stderr)
+        return status
+    with tempfile.TemporaryDirectory(prefix="kb-export-") as tmp:
+        out = Path(tmp) / "keymap.c"
+        status = export_keymap(backup, out, argv)
+        if not status:
+            sys.stdout.write(out.read_text())
+        return status
+
+
 def cmd_pull(args: argparse.Namespace, argv: list[str]) -> int:
-    export = argparse.Namespace(backup=None, output=str(GENERATED_KEYMAP), quiet=True)
-    if cmd_export(export, argv):
-        return 1
-    if args.check:
-        return via_merge.main(["--check"])
-    status = via_merge.main([])
+    with tempfile.TemporaryDirectory(prefix="kb-pull-") as tmp:
+        live = Path(tmp) / "live.keymap.c"
+        if export_keymap(None, live, argv):
+            return 1
+        if args.check:
+            return via_merge.main([str(live), "--check"])
+        status = via_merge.main([str(live)])
     format_keymap.main([str(TARGET_KEYMAP)])
     return status
 
@@ -223,8 +239,8 @@ def parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("export", help="live EEPROM or VIA backup -> keymap.c")
     s.add_argument("backup", nargs="?", help="VIA Save + Load backup (default: dump the live EEPROM)")
-    s.add_argument("output", nargs="?", default=str(GENERATED_KEYMAP))
-    s.set_defaults(func=cmd_export, quiet=False)
+    s.add_argument("-o", "--output", help="keymap.c to write (default: stdout)")
+    s.set_defaults(func=cmd_export)
 
     s = sub.add_parser("pull", help="patch changed live-EEPROM positions into keymap.c")
     s.add_argument("--check", action="store_true", help="report changes, write nothing; exit 1 if any")

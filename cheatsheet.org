@@ -10,17 +10,17 @@ Keycode families and their shorthand macros. Source of truth:
 
 * Layer keys
 
-| Shortcut         | Behavior                                             | Layers |
-|------------------+------------------------------------------------------+--------|
-| =MO(l)=          | Momentary: layer on while held                       | 0-31   |
-| =LM(l, mod)=     | Momentary layer plus modifier(s) held (layer-mod)    | 0-15   |
-| =LT(l, kc)=      | Layer while held, =kc= when tapped (layer-tap)       | 0-15   |
-| =TT(l)=          | Like =MO=, but tapping it repeatedly toggles the layer | 0-31 |
-| =TG(l)=          | Toggle layer on/off                                  | 0-31   |
-| =TO(l)=          | Activate only =l=, keep the default layer            | 0-31   |
-| =DF(l)=          | Set default layer until power loss                   | 0-31   |
-| =PDF(l)=         | Set default layer persistently (EEPROM)              | 0-31   |
-| =OSL(l)=         | One-shot layer: active for the next keypress only    | 0-31   |
+| Shortcut   | Behavior                                             | Layers |
+|------------+------------------------------------------------------+--------|
+| =MO(l)=      | Momentary: layer on while held                       |   0-31 |
+| =LM(l, mod)= | Momentary layer plus modifier(s) held (layer-mod)    |   0-15 |
+| =LT(l, kc)=  | Layer while held, =kc= when tapped (layer-tap)         |   0-15 |
+| =TT(l)=      | Like =MO=, but tapping it repeatedly toggles the layer |   0-31 |
+| =TG(l)=      | Toggle layer on/off                                  |   0-31 |
+| =TO(l)=      | Activate only =l=, keep the default layer              |   0-31 |
+| =DF(l)=      | Set default layer until power loss                   |   0-31 |
+| =PDF(l)=     | Set default layer persistently (EEPROM)              |   0-31 |
+| =OSL(l)=     | One-shot layer: active for the next keypress only    |   0-31 |
 
 =LM= modifiers use =MOD_*= bits, not =KC_*=: =LM(1, MOD_LSFT)=,
 =LM(2, MOD_LCTL | MOD_LALT)=.
@@ -69,7 +69,7 @@ other quantum keycodes are not mod-compatible; see [[*Sharp edges]].
 | =UC(0xNNNN)=                      | Type a Unicode code point                      | =UNICODE_ENABLE= |
 | =UM(i)= / =UP(i, j)=              | Unicode map / Unicode map pair                 | =UNICODEMAP_ENABLE= |
 | =QK_KB_0= ... =QK_KB_31=          | Keyboard/community custom keycodes             | handler in =process_record_kb= |
-| =QK_USER_0= ... =QK_USER_31=      | User custom keycodes (=SAFE_RANGE= = =QK_USER=) | =process_record_user= |
+| =QK_USER_0= ... =QK_USER_31=      | User custom keycodes (=SAFE_RANGE= is =QK_USER=) | =process_record_user= |
 | =PB_1= ... =PB_32=                | Programmable buttons                           | - |
 
 * Plain keycode families

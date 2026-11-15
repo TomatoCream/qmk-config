@@ -14,9 +14,11 @@ One entry point: `./kb <command>` (`./kb --help`, `./kb <command> --help`).
   patch, compile, copy the UF2 to `firmware-rp2040/`. Keymap defaults to `default`.
 - `./kb flash [keymap|file.uf2]` — wait for the `RPI-RP2` BOOTSEL volume, then copy
   the newest UF2. BOOTSEL entry is physical.
-- `./kb export` — dump the running DO52 Pro's VIA EEPROM over raw HID and write
-  formatted `./keymap.generated.c`.
-- `./kb export <via-backup.json> [out.c]` — convert a VIA *Save + Load* backup
+- `./kb export` — dump the running DO52 Pro's VIA EEPROM over raw HID and print
+  the formatted keymap.c to stdout; intermediates stay in a temp dir (never
+  write into the repo root — qmk json2c leaves `<out>.bak` beside an existing
+  output).
+- `./kb export <via-backup.json> [-o out.c]` — convert a VIA *Save + Load* backup
   instead of the live EEPROM.
 - `./kb pull [--check]` — dump the EEPROM and patch only changed
   positions in `keyboards/do52pro/keymaps/default/keymap.c`; `--check` reports and
