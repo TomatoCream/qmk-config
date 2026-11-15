@@ -10,14 +10,10 @@ QMK checkout itself stays outside this repo.
 
 #+begin_src text
 .
-├── build.sh                    build: install keyboard, patch QMK, compile
-├── flash.sh                    wait for RPI-RP2 and copy the UF2
-├── via-export.sh               live VIA EEPROM/backup -> keymap.c
-├── via-dump.py                 VIA raw HID dynamic keymap dumper
-├── via-apply.py                VIA backup JSON -> live EEPROM, diff-only
-├── via-merge.py                position-diff a generated keymap into keymap.c
-├── via-pull.sh                 dump + patch only changed keymap positions
-├── format-keymap.py            reflow LAYOUT_5x6 calls into a visual grid
+├── kb                          entry point: build, flash, export, pull, dump,
+│                               apply, merge, format (./kb --help)
+├── tools/                      Python modules behind ./kb (VIA raw HID,
+│                               keymap merge, LAYOUT_5x6 formatter)
 ├── flake.nix / flake.lock      qmk + arm-none-eabi toolchain
 ├── keyboards/do52pro/          QMK keyboard definition + default keymap
 │   └── via/do52pro.json        VIA draft definition (Design tab)
@@ -39,21 +35,21 @@ git submodule update --init --recursive
 #+end_src
 
 The =vusb= submodule is not needed for the RP2040 build; it may remain
-uninitialized. =build.sh= uses =./qmk_firmware= by default.
+uninitialized. =kb build= uses =./qmk_firmware= by default.
 
 * Requirements
 
 - QMK from the submodule (=./qmk_firmware=). Override with =QMK_HOME= to use a
   different checkout (the script falls back to the old archive path when the
   submodule is absent).
-- Nix. =build.sh= re-execs into =nix develop= when =arm-none-eabi-gcc= is not
+- Nix. =kb build= re-execs into =nix develop= when =arm-none-eabi-gcc= is not
   on =PATH=.
 
 * Build
 
 #+begin_src bash
-./build.sh                 # VIA-enabled default keymap
-QMK_HOME=/path/to/qmk_firmware ./build.sh
+./kb build                 # VIA-enabled default keymap
+QMK_HOME=/path/to/qmk_firmware ./kb build
 #+end_src
 
 The script:
@@ -67,27 +63,27 @@ The script:
 
 * Formatting keymaps
 
-=format-keymap.py= reflows every =LAYOUT_5x6(...)= call into the physical
+=kb format= reflows every =LAYOUT_5x6(...)= call into the physical
 grid: left half 5 rows × 6, right half 5 rows × 6 (its last row is the thumb
 row), then the two 4-key DPAD rows. Columns are padded per layer so the commas
 line up as a table; only line breaks, padding, and the group comments change —
 keycode order is untouched.
 
 #+begin_src bash
-./format-keymap.py keyboards/do52pro/keymaps/default/keymap.c
-./format-keymap.py --check keyboards/do52pro/keymaps/default/keymap.c
+./kb format keyboards/do52pro/keymaps/default/keymap.c
+./kb format --check keyboards/do52pro/keymaps/default/keymap.c
 #+end_src
 
-=via-export.sh= runs the formatter on its generated C automatically, so a VIA
+=kb export= runs the formatter on its generated C automatically, so a VIA
 dump already comes out on the same grid. Files without a =LAYOUT_5x6= call are
 left alone. =--check= exits non-zero if a file would change.
 
 * Flash
 
 #+begin_src bash
-./flash.sh                 # newest UF2 in firmware-rp2040/
-./flash.sh default         # explicit keymap name
-./flash.sh firmware-rp2040/do52pro_trackpoint_default.uf2
+./kb flash                 # newest UF2 in firmware-rp2040/
+./kb flash default         # explicit keymap name
+./kb flash firmware-rp2040/do52pro_trackpoint_default.uf2
 #+end_src
 
 Put one half in BOOTSEL (double-tap RESET, or hold BOOT while plugging USB),
@@ -124,8 +120,8 @@ The default keymap is built with QMK's VIA protocol and dynamic keymap
 (=VIA_ENABLE = yes= in =keyboards/do52pro/rules.mk=). Build and flash once:
 
 #+begin_src bash
-./build.sh
-./flash.sh
+./kb build
+./kb flash
 #+end_src
 
 Then open <https://usevia.app> in Chromium/Edge (WebHID; on NixOS add
@@ -148,15 +144,15 @@ the script reads the live dynamic keymap over VIA raw HID (usage page
 =0xFF60=) and writes the C table.
 
 #+begin_src bash
-./via-export.sh                    # live EEPROM -> ./keymap.generated.c
-./via-export.sh backup.json keyboards/do52pro/keymaps/default/keymap.c
+./kb export                    # live EEPROM -> ./keymap.generated.c
+./kb export backup.json keyboards/do52pro/keymaps/default/keymap.c
 # or write straight over the source (review the diff first)
 #+end_src
 
 A VIA *Save + Load* backup still works:
 
 #+begin_src bash
-./via-export.sh ~/Downloads/do52pro.layout.json
+./kb export ~/Downloads/do52pro.layout.json
 #+end_src
 
 A snapshot of the board is committed at
@@ -164,12 +160,12 @@ A snapshot of the board is committed at
 the converter without the keyboard attached:
 
 #+begin_src bash
-./via-export.sh keyboards/do52pro/via/do52pro-live.layout.json
+./kb export keyboards/do52pro/via/do52pro-live.layout.json
 #+end_src
 
-=via-dump.py= selects the raw HID interface by USB ID (=0x594B:0x0D52=), so
+=kb dump= selects the raw HID interface by USB ID (=0x594B:0x0D52=), so
 another VIA keyboard on the same host is ignored. The script runs
-=qmk via2json=, =qmk json2c=, then =format-keymap.py=: VIA stores layers in
+=qmk via2json=, =qmk json2c=, then =kb format=: VIA stores layers in
 matrix order (12×6), =via2json= maps them back to =LAYOUT_5x6= order, and the
 formatter lays the result out on the same grid as =keymap.c=. Hand-written
 comments are still lost and the mostly-transparent QWERTY overlay (layer 4)
@@ -177,13 +173,13 @@ is included; trim or edit before committing.
 
 ** Pull dynamic changes into keymap.c
 
-=via-pull.sh= dumps the live EEPROM and patches only the positions whose
+=kb pull= dumps the live EEPROM and patches only the positions whose
 keycode value differs from the C source, leaving comments, formatting outside
 the table, and custom functions alone:
 
 #+begin_src bash
-./via-pull.sh            # apply changed positions
-./via-pull.sh --check    # list them, write nothing
+./kb pull            # apply changed positions
+./kb pull --check    # list them, write nothing
 #+end_src
 
 Positions are =LAYOUT_5x6= argument indices: argument N is the same physical
@@ -202,11 +198,11 @@ no BOOTSEL, no unplugging, the running firmware exposes VIA's
 =id_dynamic_keymap_reset=:
 
 #+begin_src bash
-./via-dump.py --reset
+./kb dump --reset
 #+end_src
 
 Both this and a Bootmagic reset discard VIA-only edits, so run
-=./via-pull.sh= first if the EEPROM holds remaps you want in =keymap.c=.
+=./kb pull= first if the EEPROM holds remaps you want in =keymap.c=.
 Bootmagic is the fallback: with =MASTER_RIGHT= the master is the right half,
 whose top-left key is the global =[6,0]= — hold the right half's =6= while
 plugging in to reset the EEPROM and jump to the RP2040 bootloader.
@@ -223,21 +219,21 @@ both carry the Dvorak letter block; layers 1 and 3 are the Fn layers.
 
 #+begin_src bash
 # dump the live keymap to the snapshot
-./via-dump.py --vid 0x3434 --pid 0x03A1 --rows 6 --cols 16 \
+./kb dump --vid 0x3434 --pid 0x03A1 --rows 6 --cols 16 \
     -o keyboards/keychron-v10/via/keychron-v10-live.keymap.json
 
 # write a snapshot back, diff-only, and verify each written position
-./via-apply.py keyboards/keychron-v10/via/keychron-v10-live.keymap.json \
+./kb apply keyboards/keychron-v10/via/keychron-v10-live.keymap.json \
     --vid 0x3434 --pid 0x03A1 --rows 6 --cols 16
 
 # report drift without writing; exit 1 when the board differs
-./via-apply.py keyboards/keychron-v10/via/keychron-v10-live.keymap.json \
+./kb apply keyboards/keychron-v10/via/keychron-v10-live.keymap.json \
     --layer 0 --check --vid 0x3434 --pid 0x03A1 --rows 6 --cols 16
 #+end_src
 
 =--layer N= (repeatable) restricts the comparison to one VIA layer; without it
 every layer in the file is compared. Positions are row-major in the 6×16
-matrix, exactly as =via-dump.py= emits them, and only values that differ are
+matrix, exactly as =kb dump= emits them, and only values that differ are
 written, so layers absent from the file are left alone. The USB ID filter keeps
 the DO52 Pro (=0x594B:0x0D52=) and other VIA boards out of the way.
 

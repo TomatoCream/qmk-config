@@ -1,0 +1,249 @@
+#!/usr/bin/env python3
+"""DO52 Pro QMK config: build, flash, and sync the VIA keymap.
+
+    ./kb build [keymap]              compile; UF2 -> firmware-rp2040/
+    ./kb flash [keymap|file.uf2]     wait for RPI-RP2 and copy the UF2
+    ./kb export [backup.json] [out]  live EEPROM (or VIA backup) -> keymap.generated.c
+    ./kb pull [--check]              patch changed positions into keymap.c
+    ./kb dump ...                    raw EEPROM -> VIA backup JSON (--reset reseeds)
+    ./kb apply backup.json ...       VIA backup JSON -> live EEPROM, diff-only
+    ./kb merge [generated] [target]  position-diff a generated keymap into keymap.c
+    ./kb format [--check] files...   reflow LAYOUT_5x6 calls into the table grid
+
+QMK_HOME overrides the qmk_firmware checkout (default: the ./qmk_firmware
+submodule). build and export re-exec into `nix develop` when their toolchain
+is missing. `./kb <command> --help` shows each command's options.
+"""
+
+from __future__ import annotations
+
+import argparse
+import contextlib
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from tools import QMK_HOME, ROOT, format_keymap, via_apply, via_dump, via_merge  # noqa: E402
+
+KEYBOARD = "do52pro"
+LAYOUT = "LAYOUT_5x6"
+FIRMWARE_DIR = ROOT / "firmware-rp2040"
+TARGET_KEYMAP = ROOT / "keyboards/do52pro/keymaps/default/keymap.c"
+GENERATED_KEYMAP = ROOT / "keymap.generated.c"
+PS2_DRIVER = "platforms/chibios/drivers/vendor/RP/RP2040/ps2_vendor.c"
+PS2_PATCH = ROOT / "patches/ps2_vendor-either-order.patch"
+
+# Commands implemented by a tools/ module; their arguments pass through as-is.
+PASSTHROUGH = {
+    "dump": via_dump.main,
+    "apply": via_apply.main,
+    "merge": via_merge.main,
+    "format": format_keymap.main,
+}
+
+
+def fail(message: str) -> None:
+    raise SystemExit(message)
+
+
+def run(*cmd: str | Path, cwd: Path | None = None, quiet: bool = False) -> None:
+    stdout = subprocess.DEVNULL if quiet else None
+    subprocess.run([str(c) for c in cmd], cwd=cwd, stdout=stdout, check=True)
+
+
+def ensure_tool(tool: str, argv: list[str]) -> None:
+    """Re-exec `./kb argv` inside the flake's dev shell when `tool` is missing."""
+    if shutil.which(tool):
+        return
+    if os.environ.get("KB_IN_NIX_DEVELOP"):
+        fail(f"{tool} not found, even inside nix develop")
+    os.environ["KB_IN_NIX_DEVELOP"] = "1"
+    os.execvp("nix", ["nix", "develop", str(ROOT), "--command", "python3", str(ROOT / "kb"), *argv])
+
+
+def check_qmk_home() -> None:
+    if not (QMK_HOME / "builddefs/common_features.mk").is_file():
+        fail(
+            f"QMK_HOME does not look like a qmk_firmware checkout: {QMK_HOME}\n"
+            "Initialize the submodule: git submodule update --init --recursive"
+        )
+
+
+@contextlib.contextmanager
+def keyboard_linked():
+    """Symlink the overlay into qmk_firmware/keyboards for the duration."""
+    link = QMK_HOME / "keyboards" / KEYBOARD
+    if link.is_symlink() or link.exists():
+        link.unlink()
+    link.symlink_to(ROOT / "keyboards" / KEYBOARD)
+    try:
+        yield
+    finally:
+        link.unlink(missing_ok=True)
+
+
+def cmd_build(args: argparse.Namespace, argv: list[str]) -> int:
+    ensure_tool("arm-none-eabi-gcc", argv)
+    check_qmk_home()
+    in_tree_uf2 = QMK_HOME / f"{KEYBOARD}_{args.keymap}.uf2"
+    patched = False
+    try:
+        with keyboard_linked():
+            # Backport the either-pin-order PS/2 PIO driver; current QMK master has it.
+            if "PS2_CLOCK_PINDIR_BIT" not in (QMK_HOME / PS2_DRIVER).read_text():
+                print("Applying PS/2 either-order patch...")
+                with PS2_PATCH.open() as patch:
+                    subprocess.run(["patch", "-d", str(QMK_HOME), "-p1"], stdin=patch, check=True)
+                patched = True
+            run("qmk", "compile", "-kb", KEYBOARD, "-km", args.keymap, cwd=QMK_HOME)
+            FIRMWARE_DIR.mkdir(exist_ok=True)
+            out = FIRMWARE_DIR / f"{KEYBOARD}_trackpoint_{args.keymap}.uf2"
+            shutil.copy(in_tree_uf2, out)
+            print(f"Wrote {out}")
+    finally:
+        # Keep the submodule clean: revert the driver patch, drop the in-tree UF2.
+        if patched and (QMK_HOME / ".git").exists():
+            subprocess.run(["git", "-C", str(QMK_HOME), "checkout", "--", PS2_DRIVER], stderr=subprocess.DEVNULL)
+        in_tree_uf2.unlink(missing_ok=True)
+    return 0
+
+
+def find_uf2(arg: str | None) -> Path:
+    if arg and Path(arg).is_file():
+        return Path(arg).resolve()
+    if arg:
+        named = FIRMWARE_DIR / f"{KEYBOARD}_trackpoint_{arg}.uf2"
+        if named.is_file():
+            return named
+        fail(f"No UF2 found for '{arg}'. Run ./kb build {arg} first, or pass a path.")
+    built = sorted(FIRMWARE_DIR.glob("*.uf2"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if not built:
+        fail("No UF2 found. Run ./kb build first, or pass a path.")
+    return built[0]
+
+
+def lsblk(*cols: str, device: str | None = None) -> list[list[str]]:
+    cmd = ["lsblk", "-rno", ",".join(cols)] + ([device] if device else [])
+    out = subprocess.run(cmd, capture_output=True, text=True).stdout
+    return [line.split(" ") for line in out.splitlines()]
+
+
+def cmd_flash(args: argparse.Namespace, argv: list[str]) -> int:
+    uf2 = find_uf2(args.firmware)
+    print(f"Firmware: {uf2.name}")
+    print("Waiting for RPI-RP2 (double-tap RESET, or hold BOOT while plugging USB)...")
+    dev = None
+    for _ in range(120):
+        dev = next((f"/dev/{row[0]}" for row in lsblk("NAME", "LABEL") if len(row) > 1 and row[1] == "RPI-RP2"), None)
+        if dev:
+            break
+        time.sleep(1)
+    if not dev:
+        fail("Timed out: no RPI-RP2 drive found.")
+
+    def mountpoint() -> str:
+        rows = lsblk("MOUNTPOINT", device=dev)
+        return rows[0][0] if rows and rows[0] else ""
+
+    if not mountpoint():
+        run("udisksctl", "mount", "-b", dev, quiet=True)
+    mp = mountpoint()
+    if not mp:
+        fail(f"Failed to mount {dev}")
+
+    print(f"Copying {uf2.name} to {mp} ...")
+    # The board reboots the instant the write finishes; the copy/sync may
+    # report an error even on success.
+    with contextlib.suppress(OSError):
+        shutil.copyfile(uf2, Path(mp) / uf2.name)
+    with contextlib.suppress(OSError):
+        os.sync()
+    print("Done. Unplug/replug USB to power-cycle the TrackPoint.")
+    return 0
+
+
+def cmd_export(args: argparse.Namespace, argv: list[str]) -> int:
+    """VIA backup (or live EEPROM) -> formatted keymap.c via qmk via2json/json2c."""
+    check_qmk_home()
+    ensure_tool("qmk", argv)
+    out = Path(args.output).resolve()
+    with tempfile.TemporaryDirectory(prefix="kb-export-") as tmp:
+        if args.backup:
+            backup = Path(args.backup).resolve()
+            if not backup.is_file():
+                fail(f"No such file: {backup}")
+        else:
+            backup = Path(tmp) / "live.layout.json"
+            if via_dump.main(["--qmk-home", str(QMK_HOME), "-o", str(backup)]):
+                return 1
+        keymap_json = Path(tmp) / "keymap.json"
+        # qmk resolves the keyboard (keyboard.json, matrix size) from inside the
+        # tree and only exposes via2json/json2c when run from the QMK root.
+        with keyboard_linked():
+            run("qmk", "via2json", "-q", "-kb", KEYBOARD, "-km", "default", "-l", LAYOUT,
+                "-o", keymap_json, backup, cwd=QMK_HOME, quiet=args.quiet)
+            run("qmk", "json2c", "-q", "-o", out, keymap_json, cwd=QMK_HOME, quiet=args.quiet)
+    if args.quiet:
+        with open(os.devnull, "w") as devnull, contextlib.redirect_stdout(devnull):
+            format_keymap.main([str(out)])
+    else:
+        format_keymap.main([str(out)])
+        print(f"Wrote {out}")
+    return 0
+
+
+def cmd_pull(args: argparse.Namespace, argv: list[str]) -> int:
+    export = argparse.Namespace(backup=None, output=str(GENERATED_KEYMAP), quiet=True)
+    if cmd_export(export, argv):
+        return 1
+    if args.check:
+        return via_merge.main(["--check"])
+    status = via_merge.main([])
+    format_keymap.main([str(TARGET_KEYMAP)])
+    return status
+
+
+def parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="kb", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = p.add_subparsers(dest="command", required=True, metavar="command")
+
+    s = sub.add_parser("build", help="compile the firmware")
+    s.add_argument("keymap", nargs="?", default="default")
+    s.set_defaults(func=cmd_build)
+
+    s = sub.add_parser("flash", help="copy a UF2 to the board in BOOTSEL mode")
+    s.add_argument("firmware", nargs="?", help="keymap name or .uf2 path (default: newest build)")
+    s.set_defaults(func=cmd_flash)
+
+    s = sub.add_parser("export", help="live EEPROM or VIA backup -> keymap.c")
+    s.add_argument("backup", nargs="?", help="VIA Save + Load backup (default: dump the live EEPROM)")
+    s.add_argument("output", nargs="?", default=str(GENERATED_KEYMAP))
+    s.set_defaults(func=cmd_export, quiet=False)
+
+    s = sub.add_parser("pull", help="patch changed live-EEPROM positions into keymap.c")
+    s.add_argument("--check", action="store_true", help="report changes, write nothing; exit 1 if any")
+    s.set_defaults(func=cmd_pull)
+
+    for name, func in PASSTHROUGH.items():
+        sub.add_parser(name, help=sys.modules[func.__module__].__doc__.splitlines()[0])
+    return p
+
+
+def main(argv: list[str]) -> int:
+    if argv and argv[0] in PASSTHROUGH:
+        return PASSTHROUGH[argv[0]](argv[1:])
+    args = parser().parse_args(argv)
+    try:
+        return args.func(args, argv)
+    except subprocess.CalledProcessError as err:
+        return err.returncode or 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

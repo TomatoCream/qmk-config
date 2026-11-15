@@ -32,8 +32,8 @@
             echo "  qmk: $(qmk --version 2>/dev/null || echo missing)"
             echo "  arm: $(arm-none-eabi-gcc --version 2>/dev/null | head -1 || echo missing)"
             echo
-            echo "  ./build.sh [keymap]   build (installs keyboard + PS/2 patch)"
-            echo "  ./flash.sh            wait for RPI-RP2 and copy the UF2"
+            echo "  ./kb build [keymap]   build (installs keyboard + PS/2 patch)"
+            echo "  ./kb flash            wait for RPI-RP2 and copy the UF2"
             echo "  QMK_HOME=/path/to/qmk_firmware to override the checkout"
           '';
         };

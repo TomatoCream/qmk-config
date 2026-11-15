@@ -1,0 +1,162 @@
+#+TITLE: QMK keycode cheat sheet
+#+SUBTITLE: pinned QMK 0.27.10 (qmk_firmware @ 0.27.10-3-g04c2dbd3df)
+#+OPTIONS: toc:2 num:nil
+#+STARTUP: overview
+
+Keycode families and their shorthand macros. Source of truth:
+=qmk_firmware/quantum/quantum_keycodes.h= (macros) and
+=qmk_firmware/quantum/keycodes.h= (enum ranges); prose reference in
+=qmk_firmware/docs/keycodes.md=.
+
+* Layer keys
+
+| Shortcut         | Behavior                                             | Layers |
+|------------------+------------------------------------------------------+--------|
+| =MO(l)=          | Momentary: layer on while held                       | 0-31   |
+| =LM(l, mod)=     | Momentary layer plus modifier(s) held (layer-mod)    | 0-15   |
+| =LT(l, kc)=      | Layer while held, =kc= when tapped (layer-tap)       | 0-15   |
+| =TT(l)=          | Like =MO=, but tapping it repeatedly toggles the layer | 0-31 |
+| =TG(l)=          | Toggle layer on/off                                  | 0-31   |
+| =TO(l)=          | Activate only =l=, keep the default layer            | 0-31   |
+| =DF(l)=          | Set default layer until power loss                   | 0-31   |
+| =PDF(l)=         | Set default layer persistently (EEPROM)              | 0-31   |
+| =OSL(l)=         | One-shot layer: active for the next keypress only    | 0-31   |
+
+=LM= modifiers use =MOD_*= bits, not =KC_*=: =LM(1, MOD_LSFT)=,
+=LM(2, MOD_LCTL | MOD_LALT)=.
+
+* Modifier wrappers
+
+| Shortcut                           | Behavior                                  |
+|------------------------------------+-------------------------------------------|
+| =LCTL(kc)= / =LSFT(kc)= / =LALT(kc)= / =LGUI(kc)= | Hold left mod, tap =kc=  |
+| =RCTL(kc)= / =RSFT(kc)= / =RALT(kc)= / =RGUI(kc)= | Same with right mod      |
+| =C(kc)= / =S(kc)= / =A(kc)= / =G(kc)= | Short aliases for left Ctrl/Shift/Alt/GUI |
+| =LOPT(kc)= / =LCMD(kc)= / =LWIN(kc)= | Platform aliases for Alt/GUI             |
+| =ROPT(kc)= / =RCMD(kc)= / =RWIN(kc)= | Right-hand platform aliases              |
+| =ALGR(kc)=                          | Right Alt (AltGr)                         |
+| =HYPR(kc)=                          | Ctrl + Shift + Alt + GUI                  |
+| =MEH(kc)=                           | Ctrl + Shift + Alt                        |
+| =LCAG(kc)= / =LSG(kc)= / =LAG(kc)=  | Common mod chords                         |
+| =LCA(kc)= / =LSA(kc)= / =RSA(kc)= / =RCS(kc)= | Two-mod chords                  |
+| =KC_HYPR= / =KC_MEH=                | Standalone mod chords (no base key)       |
+
+Only basic keycodes (0x00-0xFF) are valid inside these wrappers. Layer and
+other quantum keycodes are not mod-compatible; see [[*Sharp edges]].
+
+* Mod-tap and one-shot
+
+| Shortcut                                        | Behavior                                |
+|-------------------------------------------------+-----------------------------------------|
+| =MT(mod, kc)=                                   | Mod while held, =kc= when tapped        |
+| =LCTL_T(kc)= / =LSFT_T(kc)= / =LALT_T(kc)= / =LGUI_T(kc)= | Left mod-tap   |
+| =RCTL_T(kc)= / =RSFT_T(kc)= / =RALT_T(kc)= / =RGUI_T(kc)= | Right mod-tap  |
+| =CTL_T= / =SFT_T= / =ALT_T= / =GUI_T=           | Aliases for the left forms              |
+| =HYPR_T(kc)= / =MEH_T(kc)= / =LCAG_T(kc)= / =C_S_T(kc)= | Multi-mod taps  |
+| =OSM(mod)=                                      | One-shot modifier: applies to next key  |
+| =OS_TOGG= =OS_ON= =OS_OFF=                      | Enable/disable one-shot globally        |
+
+=MT= and =LT= tap keycodes are 8-bit: only basic keycodes fit.
+
+* Behavioral keycodes
+
+| Shortcut                          | Behavior                                       | Requires |
+|-----------------------------------+------------------------------------------------+----------|
+| =TD(n)=                           | Tap-dance index =n=                            | =TAP_DANCE_ENABLE=, =tap_dance_actions[]= |
+| =QK_MACRO_0= ... =QK_MACRO_31=    | Static macro keycodes (legacy =MC_0= ... =MC_31=) | =feature_macros= |
+| =DM_REC1= / =DM_REC2= / =DM_PLY1= / =DM_PLY2= / =DM_RSTP= | Dynamic macro record/play | =DYNAMIC_MACRO_ENABLE= |
+| =SH_T(kc)=                        | Swap hands while held, =kc= on tap             | =SWAP_HANDS_ENABLE= |
+| =UC(0xNNNN)=                      | Type a Unicode code point                      | =UNICODE_ENABLE= |
+| =UM(i)= / =UP(i, j)=              | Unicode map / Unicode map pair                 | =UNICODEMAP_ENABLE= |
+| =QK_KB_0= ... =QK_KB_31=          | Keyboard/community custom keycodes             | handler in =process_record_kb= |
+| =QK_USER_0= ... =QK_USER_31=      | User custom keycodes (=SAFE_RANGE= = =QK_USER=) | =process_record_user= |
+| =PB_1= ... =PB_32=                | Programmable buttons                           | - |
+
+* Plain keycode families
+
+| Family                    | Examples                                                |
+|---------------------------+---------------------------------------------------------+ 
+| Basic keys                | =KC_A=, =KC_1=, =KC_ENT=, =KC_ESC=, =KC_BSPC=, =KC_TAB=, =KC_SPC= |
+| Layer filler              | =KC_TRNS= (=_______=), =KC_NO= (=XXXXXXX=)              |
+| US ANSI shifted symbols   | =KC_EXLM=, =KC_AT=, =KC_HASH=, =KC_LCBR=, =KC_RCBR=, =KC_QUES= |
+| Consumer/media            | =KC_MUTE=, =KC_VOLU=, =KC_VOLD=, =KC_MPLY=, =KC_MNXT=, =KC_MPRV= |
+| System                    | =KC_PWR=, =KC_SLEP=, =KC_WAKE=                          |
+| Mouse                     | =MS_UP=, =MS_DOWN=, =MS_LEFT=, =MS_RGHT=, =MS_BTN1= ... =MS_BTN8=, =MS_WHLU=, =MS_WHLD= |
+| Legacy mouse aliases      | =KC_BTN1= ... =KC_BTN8=, =KC_MS_U= ...                 |
+| RGB lighting              | =RGB_TOG=, =RGB_MOD=, =RGB_HUI=, =RGB_SAD=, =RGB_VAI=   |
+| Backlight                 | =BL_TOGG=, =BL_STEP=, =BL_UP=, =BL_DOWN=                |
+| Audio                     | =AU_ON=, =AU_OFF=, =AU_TOG=, =MU_ON=, =MU_OFF=          |
+| Quantum control           | =QK_BOOT=, =EE_CLR=, =DB_TOGG=, =QK_RBT=, =QK_MAKE=     |
+| Tapping term              | =DT_PRNT=, =DT_UP=, =DT_DOWN=                           |
+
+* Feature toggles
+
+| Shortcut          | Behavior                                            |
+|-------------------+-----------------------------------------------------|
+| =QK_GESC=         | Esc, or grave when Shift/GUI held (grave escape)    |
+| =CW_TOGG=         | Toggle Caps Word                                    |
+| =QK_REP= / =QK_AREP= | Repeat last key / its alternate                  |
+| =QK_LEAD=         | Begin leader sequence                               |
+| =QK_LOCK=         | Key lock: hold the next key until pressed again     |
+| =QK_LLCK=         | Layer lock: lock/unlock the highest active layer    |
+| =KO_TOGG=         | Toggle key overrides                                |
+| =AC_TOGG=         | Toggle autocorrect                                  |
+
+* Sharp edges
+
+** Momentary layer plus Shift
+
+Holding a physical Shift while pressing =MO(l)= works: layer and modifier state
+are independent.
+
+Wrapping the layer key in a modifier does not:
+
+#+begin_src c
+LSFT(MO(1))  // QK_LSFT(0x0200) | QK_MOMENTARY(0x5220) | 1 == MO(1)
+LCTL(MO(1))  // 0x5321: outside QK_MOMENTARY range (0x5220-0x523F)
+#+end_src
+
+=QK_MOMENTARY= already has the =QK_LSFT= bit set, so =LSFT()= is silently
+dropped; other modifiers produce an undefined keycode. Use =LM(1, MOD_LSFT)=
+if one key must hold Shift and activate a layer.
+
+** Transparency
+
+The key that activates a layer (=MO=, =LM=, =TT=, =LT=, ...) must be
+=KC_TRNS= on the layers it activates, or it becomes unreachable and can latch.
+
+=KC_TRNS= falls through to the next lower layer; =KC_NO= swallows the press.
+
+** Limits
+
+- =MO=, =TG=, =TO=, =DF=, =PDF=, =OSL=, =TT=: 32 layers (0-31).
+- =LM=, =LT=: 16 layers (0-15).
+- =MT= / =LT= tap keycode: 8-bit basic keycode.
+- =QK_MACRO_*=: 32 entries; =QK_KB_*= and =QK_USER_*=: 32 entries each.
+
+* Repo examples
+
+From =keyboards/do52pro/keymaps/default/keymap.c=:
+
+#+begin_src c
+MO(1),   KC_LGUI, KC_NO,   KC_NO,  KC_SPC,  KC_SPC,     // layer 0
+KC_BTN1, KC_BTN2, KC_NO,   KC_NO,  KC_LGUI, MO(1),      // layer 1
+#+end_src
+
+- =TG(3)= on Caps Lock toggles the QWERTY letter overlay.
+- =KC_BTN1= is the legacy alias of =QK_MOUSE_BUTTON_1= (=MS_BTN1=); this
+  keymap routes =KC_BTN1 ... KC_BTN8= through =process_record_user()= because
+  =PS2_MOUSE_ENABLE= suppresses =mousekey_send()=.
+- VIA *Any* field accepts raw keycodes, e.g. =TG(3)= is =0x5263=.
+- After changing the C keymap, reseed EEPROM with =./via-dump.py --reset=;
+  otherwise the new layer contents exist only in firmware and =via-pull.sh=
+  will copy =KC_TRNS= back into =keymap.c=.
+
+* References
+
+- QMK keycode reference: =qmk_firmware/docs/keycodes.md=
+- Layer semantics: =qmk_firmware/docs/feature_layers.md=
+- Mod-tap: =qmk_firmware/docs/mod_tap.md=
+- One-shot keys: =qmk_firmware/docs/one_shot_keys.md=
+- Macro definitions: =qmk_firmware/quantum/quantum_keycodes.h=
+- Keycode enum ranges: =qmk_firmware/quantum/keycodes.h=

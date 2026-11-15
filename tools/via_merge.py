@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Patch a keymap.c from a generated (live VIA) keymap, position by position.
 
 Both files use LAYOUT_5x6; argument N is the same physical key in every layer
@@ -11,13 +10,12 @@ header, comments between layers, and custom functions stay untouched.
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import re
 import sys
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
+from . import QMK_HOME, ROOT, format_keymap as fk
 
 MODBITS = {
     "LCTL": 0x01,
@@ -29,13 +27,6 @@ MODBITS = {
     "RALT": 0x14,
     "RGUI": 0x18,
 }
-
-
-def load_formatter():
-    spec = importlib.util.spec_from_file_location("format_keymap", HERE / "format-keymap.py")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def load_names(qmk_home: Path) -> dict[str, int]:
@@ -93,16 +84,15 @@ def resolve(expr: str, names: dict[str, int], depth: int = 0) -> int | None:
     return names.get(expr)
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("generated", nargs="?", default=str(HERE / "keymap.generated.c"), help="live/generated keymap.c")
-    parser.add_argument("target", nargs="?", default=str(HERE / "keyboards/do52pro/keymaps/default/keymap.c"), help="keymap.c to patch")
-    parser.add_argument("--qmk-home", default=str(HERE / "qmk_firmware"))
-    parser.add_argument("--keyboard-json", default=str(HERE / "keyboards/do52pro/keyboard.json"))
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="kb merge", description=__doc__)
+    parser.add_argument("generated", nargs="?", default=str(ROOT / "keymap.generated.c"), help="live/generated keymap.c")
+    parser.add_argument("target", nargs="?", default=str(ROOT / "keyboards/do52pro/keymaps/default/keymap.c"), help="keymap.c to patch")
+    parser.add_argument("--qmk-home", default=str(QMK_HOME))
+    parser.add_argument("--keyboard-json", default=str(ROOT / "keyboards/do52pro/keyboard.json"))
     parser.add_argument("--check", action="store_true", help="report changes without writing")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
-    fk = load_formatter()
     names = load_names(Path(args.qmk_home))
 
     generated_text = Path(args.generated).read_text()
@@ -157,7 +147,3 @@ def main() -> int:
     Path(args.target).write_text(target_text)
     print(f"updated {args.target}")
     return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

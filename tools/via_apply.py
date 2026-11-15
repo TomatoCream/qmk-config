@@ -1,32 +1,27 @@
-#!/usr/bin/env python3
 """Apply a VIA backup JSON to the running keyboard's dynamic keymap.
 
 The input is the same `{"name": ..., "macros": [...], "layers": [[...]]}`
-format that `via-dump.py` writes and VIA's "Save + Load" tab uses. Only
+format that `kb dump` writes and VIA's "Save + Load" tab uses. Only
 positions whose value differs are written, so the board keeps anything the
 JSON does not mention explicitly only through its keycodes, not through its
 EEPROM layout. Nothing is flashed.
 
-    ./via-apply.py keymap.json --vid 0x3434 --pid 0x03A1 --rows 6 --cols 16
-    ./via-apply.py keymap.json --layer 0 --check    # report, exit 1 on drift
+    ./kb apply keymap.json --vid 0x3434 --pid 0x03A1 --rows 6 --cols 16
+    ./kb apply keymap.json --layer 0 --check    # report, exit 1 on drift
 
 Layer indices are VIA layers (`--layer` may repeat); positions are row-major in
-the `rows x cols` matrix, exactly like `via-dump.py`.
+the `rows x cols` matrix, exactly like `kb dump`.
 """
 
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import re
 import sys
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
-_spec = importlib.util.spec_from_file_location("via_dump", HERE / "via-dump.py")
-via_dump = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(via_dump)
+from . import QMK_HOME, via_dump
 
 # QMK modifier bits as encoded in the high byte of a QK_MODS keycode.
 MOD_BITS = {
@@ -75,18 +70,18 @@ def resolve(expr: str, names: dict[str, int], depth: int = 0) -> int:
     raise SystemExit(f"Unknown keycode expression: {expr!r}")
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="kb apply", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("backup", help="VIA backup JSON to load")
     parser.add_argument("--layer", type=int, action="append", help="only apply this VIA layer (repeatable; default: every layer in the file)")
     parser.add_argument("--check", action="store_true", help="report differing positions without writing; exit 1 when there are any")
-    parser.add_argument("--qmk-home", default=str(HERE / "qmk_firmware"))
+    parser.add_argument("--qmk-home", default=str(QMK_HOME))
     parser.add_argument("--rows", type=int, default=12)
     parser.add_argument("--cols", type=int, default=6)
     parser.add_argument("--vid", type=lambda v: int(v, 0), default=0x594B)
     parser.add_argument("--pid", type=lambda v: int(v, 0), default=0x0D52)
     parser.add_argument("--device", help="raw HID path (default: first matching usage page 0xFF60)")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     backup = json.loads(Path(args.backup).read_text())
     codes = via_dump.load_keycodes(Path(args.qmk_home))
@@ -135,7 +130,3 @@ def main() -> int:
 
     print(f"Wrote {len(deltas)} position(s) to {device}", file=sys.stderr)
     return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Reflow LAYOUT_5x6(...) calls into a fixed visual grid.
 
 The do52pro LAYOUT_5x6 argument order (keyboard.json) is:
@@ -11,6 +10,8 @@ The do52pro LAYOUT_5x6 argument order (keyboard.json) is:
 Every call is rewritten in place; columns are padded per layer so the grid
 reads as a table. Comments inside the argument list are replaced by the group
 headings below. Use --check to test without writing.
+
+    ./kb format keyboards/do52pro/keymaps/default/keymap.c
 """
 
 from __future__ import annotations
@@ -208,11 +209,11 @@ def format_text(text: str, source: str) -> tuple[str, bool]:
     return text, changes
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="kb format", description=__doc__.splitlines()[0])
     parser.add_argument("--check", action="store_true", help="exit 1 if a file would change")
     parser.add_argument("files", nargs="+", type=Path, help="C source files to format")
-    opts = parser.parse_args()
+    opts = parser.parse_args(argv)
 
     status = 0
     for path in opts.files:
@@ -231,7 +232,3 @@ def main() -> int:
             path.write_text(formatted, encoding="utf-8")
             print(f"formatted {path}")
     return status
-
-
-if __name__ == "__main__":
-    sys.exit(main())

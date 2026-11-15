@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Dump the running keyboard's VIA dynamic keymap to a VIA backup JSON.
 
 The JSON layout matches what VIA's "Save + Load" tab writes, so
@@ -26,6 +25,8 @@ import select
 import struct
 import sys
 from pathlib import Path
+
+from . import QMK_HOME
 
 RAW_HID_USAGE = b"\x06\x60\xff"  # Usage Page (Vendor 0xFF60)
 HIDIOCGRDESCSIZE = 0x80044801
@@ -165,18 +166,18 @@ def render_keycode(value: int, codes: dict[int, dict]) -> str:
     return _keycode_name(entry) if entry else f"0x{value:04X}"
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="kb dump", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-o", "--output", help="VIA backup JSON to write")
     parser.add_argument("--reset", action="store_true", help="reseed the board's dynamic keymap from the firmware (keymap.c) and exit, instead of dumping")
-    parser.add_argument("--qmk-home", default=os.environ.get("QMK_HOME") or str(Path(__file__).resolve().parent / "qmk_firmware"))
+    parser.add_argument("--qmk-home", default=str(QMK_HOME))
     parser.add_argument("--rows", type=int, default=12)
     parser.add_argument("--cols", type=int, default=6)
     parser.add_argument("--name", default="do52pro")
     parser.add_argument("--vid", type=lambda v: int(v, 0), default=0x594B)
     parser.add_argument("--pid", type=lambda v: int(v, 0), default=0x0D52)
     parser.add_argument("--device", help="raw HID path (default: first matching usage page 0xFF60)")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if not args.reset and not args.output:
         parser.error("-o/--output is required unless --reset is given")
@@ -207,7 +208,3 @@ def main() -> int:
     Path(args.output).write_text(json.dumps(backup, indent=2) + "\n")
     print(f"Dumped {len(layers)} layers from {device}", file=sys.stderr)
     return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
