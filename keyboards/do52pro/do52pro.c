@@ -1,6 +1,24 @@
 #include "do52pro.h"
 #include "print.h"
 #include "debug.h"
+#ifdef PS2_MOUSE_ENABLE
+#    include "ps2_mouse.h"
+#endif
+#ifdef MOUSEKEY_ENABLE
+#    include "mousekey.h"
+#endif
+
+// The legacy ps2_mouse driver builds every movement report from the
+// TrackPoint's own button byte, which clears a keyboard-bound KC_BTN1..8 held
+// on the thumb row. Merge it back so press-and-hold drag keeps working while
+// the pointer moves.
+#ifdef PS2_MOUSE_ENABLE
+void ps2_mouse_moved_user(report_mouse_t *mouse_report) {
+#    ifdef MOUSEKEY_ENABLE
+    mouse_report->buttons |= mousekey_get_report().buttons;
+#    endif
+}
+#endif
 
 void keyboard_post_init_kb(void) {
 #ifdef CONSOLE_ENABLE
