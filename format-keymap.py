@@ -8,8 +8,9 @@ The do52pro LAYOUT_5x6 argument order (keyboard.json) is:
     60-63  left DPAD
     64-67  right DPAD
 
-Every call is rewritten in place; comments inside the argument list are
-replaced by the group headings below. Use --check to test without writing.
+Every call is rewritten in place; columns are padded per layer so the grid
+reads as a table. Comments inside the argument list are replaced by the group
+headings below. Use --check to test without writing.
 """
 
 from __future__ import annotations
@@ -152,17 +153,40 @@ def _line_indent(text: str, pos: int) -> str:
 
 
 def _render(args: list[str], indent: str) -> str:
-    lines = []
+    # Split into groups first so column widths can span the whole layer: all
+    # 6-wide rows share one table, all 4-wide DPAD rows share another.
+    groups: list[tuple[str, list[list[str]]]] = []
     pos = 0
     for title, rows in GROUPS:
-        lines.append(f"{indent}// {title}")
+        chunks = []
         for count in rows:
-            chunk = args[pos : pos + count]
+            chunks.append(args[pos : pos + count])
             pos += count
-            line = indent + ", ".join(chunk)
-            if pos != len(args):
-                line += ","
-            lines.append(line)
+        groups.append((title, chunks))
+
+    widths: dict[int, list[int]] = {}
+    for _, chunks in groups:
+        for chunk in chunks:
+            column_widths = widths.setdefault(len(chunk), [0] * len(chunk))
+            for i, token in enumerate(chunk):
+                column_widths[i] = max(column_widths[i], len(token))
+
+    lines = []
+    index = 0
+    for title, chunks in groups:
+        lines.append(f"{indent}// {title}")
+        for chunk in chunks:
+            column_widths = widths[len(chunk)]
+            fields = []
+            for i, token in enumerate(chunk):
+                index += 1
+                if index == len(args):
+                    fields.append(token)
+                else:
+                    # Pad the cell so the next token starts in the same column
+                    # on every row; rstrip() below drops trailing padding.
+                    fields.append((token + ",").ljust(column_widths[i] + 1) + " ")
+            lines.append((indent + "".join(fields)).rstrip())
     return "\n" + "\n".join(lines)
 
 

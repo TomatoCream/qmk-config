@@ -64,8 +64,9 @@ The script:
 
 =format-keymap.py= reflows every =LAYOUT_5x6(...)= call into the physical
 grid: left half 5 rows × 6, right half 5 rows × 6 (its last row is the thumb
-row), then the two 4-key DPAD rows. It only changes line breaks and the group
-comments; keycode order is untouched.
+row), then the two 4-key DPAD rows. Columns are padded per layer so the commas
+line up as a table; only line breaks, padding, and the group comments change —
+keycode order is untouched.
 
 #+begin_src bash
 ./format-keymap.py keyboards/do52pro/keymaps/default/keymap.c
