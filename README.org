@@ -182,8 +182,12 @@ This QMK revision's PIO driver only accepted =clock = data + 1=; the patch in
 No wire swap is needed.
 
 ** Buttons
-=MOUSEKEY_ENABLE = yes= is required for =KC_BTN1..3=; =PS2_MOUSE_ENABLE= alone
-only provides pointer motion.
+=MOUSEKEY_ENABLE = yes= is required for =KC_BTN1..8=. With =PS2_MOUSE_ENABLE=
+quantum's =register_mouse()= skips =mousekey_send()= for button keycodes
+(assuming a pointing device sends them), while the legacy PS/2 driver only
+reports the TrackPoint's own buttons. =process_record_user()= in the keymap
+therefore calls =mousekey_on/off()= + =mousekey_send()= itself; without that
+hook the keycodes set the internal report but never reach the host.
 
 ** Debug console
 =CONSOLE_ENABLE= is off in =rules.mk=. Enable it and =qmk console= to see

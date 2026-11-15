@@ -10,7 +10,7 @@
 //  - ZMK LPAR/RPAR = ()          -> QMK KC_LPRN/KC_RPRN
 //  - ZMK &mo 1 -> MO(1), &to 0 -> TO(0)
 //  - ZMK &sys_reset -> QK_RBT, &bootloader -> QK_BOOT
-//  - ZMK &mkp LCLK -> KC_BTN1 (needs MOUSEKEY_ENABLE to actually click)
+//  - ZMK &mkp LCLK -> KC_BTN1 (transmitted by process_record_user below)
 //  - ZMK BLE (&bt ...), &ext_power are Bluetooth/nRF only -> KC_NO on this
 //    wired RP2040 build.
 //  - The physical bottom row has 5 keys/side in ZMK, but this LAYOUT_5x6
@@ -31,7 +31,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_Y,    KC_U,    KC_I,    KC_O,   KC_P,    KC_BSLS,
         KC_H,    KC_J,    KC_K,    KC_L,   KC_SCLN, KC_ENT,
         KC_N,    KC_M,    KC_COMM, KC_DOT, KC_SLSH, KC_RSFT,
-        KC_BTN1, KC_ENT,  KC_NO,   KC_NO,  KC_LGUI, MO(1),
+        KC_BTN1, KC_BTN2, KC_NO,   KC_NO,  KC_LGUI, MO(1),
         // Left DPAD
         KC_MPRV, KC_VOLD,  KC_VOLU, KC_MNXT,
         // Right DPAD
@@ -74,3 +74,22 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_NO, KC_NO, KC_NO, KC_NO,
         // Right DPAD
         KC_NO, KC_NO, KC_NO, KC_NO)};
+
+// PS2_MOUSE_ENABLE makes quantum's register_mouse() treat mouse button
+// keycodes as pointing-device buttons and skip mousekey_send(); the legacy
+// ps2_mouse driver only reports the TrackPoint's own buttons, so KC_BTN1..8
+// from the keymap never reach the host. Send them ourselves.
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
+        case KC_BTN1 ... KC_BTN8:
+            if (record->event.pressed) {
+                mousekey_on((uint8_t)keycode);
+            } else {
+                mousekey_off((uint8_t)keycode);
+            }
+            mousekey_send();
+            return false;
+        default:
+            return true;
+    }
+}

@@ -6,7 +6,8 @@ VIA_ENABLE = yes
 
 EXTRAKEY_ENABLE = yes
 
-# KC_BTN1..3 need MOUSEKEY_ENABLE; PS2_MOUSE_ENABLE alone only moves the pointer.
+# KC_BTN1..8 need MOUSEKEY_ENABLE. PS2_MOUSE_ENABLE suppresses quantum's own
+# button send, so keymap.c::process_record_user() transmits them.
 MOUSEKEY_ENABLE = yes
 
 # Debug console (`qmk console`). Enable while debugging PS/2 or boot.
