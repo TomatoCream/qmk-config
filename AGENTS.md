@@ -42,8 +42,9 @@ the keyboard overlay, keymaps, VIA definitions, and tooling live here.
   (4 layers, 6×16). QMK hardware is upstream `keychron/v10/ansi_encoder`
   (`LAYOUT_ansi_89`, USB `3434:03A1`); VIA already knows the stock board. The
   board's keymap lives in its EEPROM — this repo holds no V10 `keymap.c`.
-  Layer 0 (Mac base) is Dvorak; layer 2 (Windows base, selected by the rear
-  Mac/Win slider) is still QWERTY. Re-apply the snapshot over raw HID with
+  Layer 0 (Mac base) and layer 2 (Windows base, selected by the rear Mac/Win
+  slider) both carry Dvorak letters; layers 1 and 3 are the Fn layers.
+  Re-apply the snapshot over raw HID with
   `./via-apply.py keyboards/keychron-v10/via/keychron-v10-live.keymap.json
   --vid 0x3434 --pid 0x03A1 --rows 6 --cols 16`; re-dump it after remapping in
   VIA.

@@ -218,9 +218,8 @@ Keychron VIA firmware; this repo carries no firmware or =keymap.c= for it. Its
 keymap lives in the board's EEPROM, so it is edited over raw HID and recorded
 as a VIA backup snapshot: =keyboards/keychron-v10/via/keychron-v10-live.keymap.json=.
 
-Layer 0 (Mac base) is Dvorak; layer 1 (Mac Fn) and layer 3 (Win Fn) are
-unchanged, and layer 2 (Windows base, selected by the rear Mac/Win slider) is
-still QWERTY.
+Layers 0 (Mac base) and 2 (Windows base, selected by the rear Mac/Win slider)
+both carry the Dvorak letter block; layers 1 and 3 are the Fn layers.
 
 #+begin_src bash
 # dump the live keymap to the snapshot
