@@ -9,13 +9,15 @@ set -euo pipefail
 here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 target="$here/keyboards/do52pro/keymaps/default/keymap.c"
 
-case "${1:-}" in
-    ""|do52|do52pro) ;;
-    --check) ;;
-    *) echo "usage: $0 [do52|do52pro] [--check]" >&2; exit 2 ;;
-esac
+keyboard=do52pro
 check=0
-[ "${1:-}" = "--check" ] && check=1
+for arg in "$@"; do
+    case "$arg" in
+        do52|do52pro) keyboard=$arg ;;
+        --check) check=1 ;;
+        *) echo "usage: $0 [do52|do52pro] [--check]" >&2; exit 2 ;;
+    esac
+done
 
 "$here/via-export.sh" >/dev/null
 
