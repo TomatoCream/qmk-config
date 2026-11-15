@@ -14,14 +14,15 @@ QMK checkout itself stays outside this repo.
 ├── flash.sh                    wait for RPI-RP2 and copy the UF2
 ├── via-export.sh               live VIA EEPROM/backup -> keymap.c
 ├── via-dump.py                 VIA raw HID dynamic keymap dumper
+├── via-apply.py                VIA backup JSON -> live EEPROM, diff-only
 ├── via-merge.py                position-diff a generated keymap into keymap.c
 ├── via-pull.sh                 dump + patch only changed keymap positions
 ├── format-keymap.py            reflow LAYOUT_5x6 calls into a visual grid
 ├── flake.nix / flake.lock      qmk + arm-none-eabi toolchain
 ├── keyboards/do52pro/          QMK keyboard definition + default keymap
 │   └── via/do52pro.json        VIA draft definition (Design tab)
-├── keyboards/keychron-v10/     VIA draft only; QMK definition is upstream
-│   └── via/keychron-v10-ansi-encoder.json
+├── keyboards/keychron-v10/     VIA draft + live keymap snapshot; QMK upstream
+│   └── via/keychron-v10-ansi-encoder.json, keychron-v10-live.keymap.json
 ├── patches/                    PS/2 PIO pin-order backport
 ├── qmk_firmware/               QMK source (git submodule, pinned)
 └── firmware-rp2040/            build output (gitignored)
@@ -209,6 +210,37 @@ Both this and a Bootmagic reset discard VIA-only edits, so run
 Bootmagic is the fallback: with =MASTER_RIGHT= the master is the right half,
 whose top-left key is the global =[6,0]= — hold the right half's =6= while
 plugging in to reset the EEPROM and jump to the RP2040 bootloader.
+
+* Keychron V10 (Alice)
+
+The V10 (wired 75% Alice, =keychron/v10/ansi_encoder= upstream) runs stock
+Keychron VIA firmware; this repo carries no firmware or =keymap.c= for it. Its
+keymap lives in the board's EEPROM, so it is edited over raw HID and recorded
+as a VIA backup snapshot: =keyboards/keychron-v10/via/keychron-v10-live.keymap.json=.
+
+Layer 0 (Mac base) is Dvorak; layer 1 (Mac Fn) and layer 3 (Win Fn) are
+unchanged, and layer 2 (Windows base, selected by the rear Mac/Win slider) is
+still QWERTY.
+
+#+begin_src bash
+# dump the live keymap to the snapshot
+./via-dump.py --vid 0x3434 --pid 0x03A1 --rows 6 --cols 16 \
+    -o keyboards/keychron-v10/via/keychron-v10-live.keymap.json
+
+# write a snapshot back, diff-only, and verify each written position
+./via-apply.py keyboards/keychron-v10/via/keychron-v10-live.keymap.json \
+    --vid 0x3434 --pid 0x03A1 --rows 6 --cols 16
+
+# report drift without writing; exit 1 when the board differs
+./via-apply.py keyboards/keychron-v10/via/keychron-v10-live.keymap.json \
+    --layer 0 --check --vid 0x3434 --pid 0x03A1 --rows 6 --cols 16
+#+end_src
+
+=--layer N= (repeatable) restricts the comparison to one VIA layer; without it
+every layer in the file is compared. Positions are row-major in the 6×16
+matrix, exactly as =via-dump.py= emits them, and only values that differ are
+written, so layers absent from the file are left alone. The USB ID filter keeps
+the DO52 Pro (=0x594B:0x0D52=) and other VIA boards out of the way.
 
 * Hardware facts
 

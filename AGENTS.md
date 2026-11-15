@@ -22,6 +22,11 @@ the keyboard overlay, keymaps, VIA definitions, and tooling live here.
 - `./via-dump.py -o out.json` — raw EEPROM to VIA backup JSON. Options: `--rows`,
   `--cols`, `--vid`, `--pid`, `--device`, `--qmk-home`; `--reset` reseeds the
   board's dynamic keymap from the firmware (VIA cmd `0x06`) instead of dumping.
+- `./via-apply.py <backup.json> [--layer N] [--check]` — write a VIA backup JSON
+  to the running board's EEPROM over raw HID, position by position; only values
+  that differ are written and read back. `--check` reports the differences and
+  exits 1. Same `--rows/--cols/--vid/--pid/--device/--qmk-home` options as
+  `via-dump.py`. V10: `--vid 0x3434 --pid 0x03A1 --rows 6 --cols 16`.
 - `./format-keymap.py <file>` / `--check` — reflow `LAYOUT_5x6(...)` calls into the
   table grid; `--check` exits non-zero if a file would change.
 - Verification: `./build.sh` and `./format-keymap.py --check
@@ -32,9 +37,16 @@ the keyboard overlay, keymaps, VIA definitions, and tooling live here.
 - `keyboards/do52pro/` — QMK keyboard definition, `keymaps/default/keymap.c`,
   `via/do52pro.json` (VIA Design-tab definition), `via/do52pro-live.layout.json`
   (committed snapshot for offline converter tests).
-- `keyboards/keychron-v10/via/` — VIA Design-tab definition only. QMK hardware is
-  upstream `keychron/v10/ansi_encoder` (`LAYOUT_ansi_89`, USB `3434:03A1`); VIA
-  already knows the stock board.
+- `keyboards/keychron-v10/via/` — VIA Design-tab definition plus
+  `keychron-v10-live.keymap.json`, a snapshot of the board's dynamic keymap
+  (4 layers, 6×16). QMK hardware is upstream `keychron/v10/ansi_encoder`
+  (`LAYOUT_ansi_89`, USB `3434:03A1`); VIA already knows the stock board. The
+  board's keymap lives in its EEPROM — this repo holds no V10 `keymap.c`.
+  Layer 0 (Mac base) is Dvorak; layer 2 (Windows base, selected by the rear
+  Mac/Win slider) is still QWERTY. Re-apply the snapshot over raw HID with
+  `./via-apply.py keyboards/keychron-v10/via/keychron-v10-live.keymap.json
+  --vid 0x3434 --pid 0x03A1 --rows 6 --cols 16`; re-dump it after remapping in
+  VIA.
 - `qmk_firmware/` — pinned QMK submodule; `build.sh` removes its symlink and reverts
   the PS/2 patch after every build.
 - `via-export.sh`, `via-dump.py`, `via-merge.py`, `via-pull.sh`,
