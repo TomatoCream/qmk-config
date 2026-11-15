@@ -32,7 +32,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         MO(1),   KC_LGUI, KC_NO,   KC_NO,  KC_SPC,  KC_SPC,
         // Right rows 6-10
         KC_6,    KC_7,    KC_8,    KC_9,   KC_0,    KC_BSPC,
-        KC_F,    KC_G,    KC_C,    KC_R,   KC_L,    KC_BSLS,
+        KC_F,    KC_G,    KC_C,    KC_R,   KC_L,    KC_SLSH,
         KC_D,    KC_H,    KC_T,    KC_N,   KC_S,    KC_ENT,
         KC_B,    KC_M,    KC_W,    KC_V,   KC_Z,    KC_RSFT,
         KC_BTN1, KC_BTN2, KC_NO,   KC_NO,  KC_LGUI, MO(1),
@@ -46,17 +46,17 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // Layer 1: upper_layer (symbols)
     [1] = LAYOUT_5x6(
         // Left rows 0-4
-        KC_GRV,  KC_NO,   KC_NO,   KC_NO,   KC_NO,   KC_NO,
-        KC_TAB,  KC_NO,   KC_NO,   KC_LCBR, KC_RCBR, KC_GRV,
-        KC_NO,   KC_NO,   KC_NO,   KC_LPRN, KC_RPRN, KC_NO,
-        KC_NO,   KC_NO,   KC_NO,   KC_LPRN, KC_RPRN, KC_NO,
-        KC_LCTL, TG(3),   KC_NO,   KC_NO,   KC_SPC,  KC_NO,
+        KC_GRV, KC_NO,      KC_NO,      KC_NO,   KC_NO,         KC_NO,
+        KC_TAB, KC_NO,      KC_NO,      KC_LCBR, KC_RCBR,       KC_GRV,
+        KC_NO,  KC_NO,      KC_NO,      KC_LPRN, KC_RPRN,       KC_NO,
+        KC_NO,  KC_NO,      KC_NO,      KC_LPRN, KC_RPRN,       KC_NO,
+        KC_NO,  TG(3),      KC_NO,      KC_NO,   KC_SPC,        KC_NO,
         // Right rows 6-10
-        KC_NO,   KC_NO,   KC_NO,   KC_MINS, KC_EQL,  KC_NO,
-        KC_NO,   KC_LBRC, KC_RBRC, KC_NO,   KC_SLSH, KC_PEQL,
-        KC_NO,   KC_LCBR, KC_RCBR, KC_NO,   KC_NO,   QK_RBT,
-        KC_NO,   KC_LCBR, KC_RCBR, KC_NO,   KC_NO,   QK_BOOT,
-        KC_NO,   KC_SPC,  KC_NO,   KC_NO,   KC_NO,   KC_NO,
+        KC_NO,  KC_NO,      KC_NO,      KC_MINS, KC_EQL,        KC_NO,
+        KC_NO,  KC_LBRC,    KC_RBRC,    KC_NO,   LSFT(KC_SLSH), KC_BSLS,
+        KC_NO,  LSFT(KC_9), LSFT(KC_0), KC_NO,   KC_NO,         QK_RBT,
+        KC_NO,  KC_LCBR,    KC_RCBR,    KC_NO,   KC_NO,         QK_BOOT,
+        KC_NO,  KC_SPC,     KC_NO,      KC_NO,   KC_NO,         KC_NO,
         // Left DPAD
         KC_NO, KC_NO, KC_NO, KC_NO,
         // Right DPAD
