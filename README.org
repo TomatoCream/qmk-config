@@ -17,6 +17,8 @@ QMK checkout itself stays outside this repo.
 ├── flake.nix / flake.lock      qmk + arm-none-eabi toolchain
 ├── keyboards/do52pro/          QMK keyboard definition + default keymap
 │   └── via/do52pro.json        VIA draft definition (Design tab)
+├── keyboards/keychron-v10/     VIA draft only; QMK definition is upstream
+│   └── via/keychron-v10-ansi-encoder.json
 ├── patches/                    PS/2 PIO pin-order backport
 ├── qmk_firmware/               QMK source (git submodule, pinned)
 └── firmware-rp2040/            build output (gitignored)
