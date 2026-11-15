@@ -13,6 +13,7 @@ QMK checkout itself stays outside this repo.
 ├── build.sh                    build: install keyboard, patch QMK, compile
 ├── flash.sh                    wait for RPI-RP2 and copy the UF2
 ├── via-export.sh               VIA backup JSON -> keymap.c
+├── format-keymap.py            reflow LAYOUT_5x6 calls into a visual grid
 ├── flake.nix / flake.lock      qmk + arm-none-eabi toolchain
 ├── keyboards/do52pro/          QMK keyboard definition + default/via keymaps
 │   └── via/do52pro.json        VIA draft definition (Design tab)
@@ -58,6 +59,23 @@ The script:
    it after the build so the submodule stays clean,
 3. runs =qmk compile -kb do52pro -km <keymap>=,
 4. copies the UF2 to =firmware-rp2040/do52pro_trackpoint_<keymap>.uf2=.
+
+* Formatting keymaps
+
+=format-keymap.py= reflows every =LAYOUT_5x6(...)= call into the physical
+grid: left half 5 rows × 6, right half 5 rows × 6 (its last row is the thumb
+row), then the two 4-key DPAD rows. It only changes line breaks and the group
+comments; keycode order is untouched.
+
+#+begin_src bash
+./format-keymap.py keyboards/do52pro/keymaps/default/keymap.c
+./format-keymap.py --check keyboards/do52pro/keymaps/default/keymap.c
+./format-keymap.py keymap.generated.c    # after via-export.sh
+#+end_src
+
+Files without a =LAYOUT_5x6= call (for example =keymaps/via/keymap.c=, which
+just includes the default keymap) are left alone. =--check= exits non-zero if
+a file would change.
 
 * Flash
 
