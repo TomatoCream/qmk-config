@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Flash the built UF2 to whichever half is in BOOTSEL mode (RPI-RP2).
 #
-#   ./flash.sh                     # VIA build if present, else newest UF2
-#   ./flash.sh via                 # firmware-rp2040/do52pro_trackpoint_via.uf2
+#   ./flash.sh                     # newest UF2 in firmware-rp2040/
 #   ./flash.sh default             # firmware-rp2040/do52pro_trackpoint_default.uf2
 #   ./flash.sh path/to/firmware.uf2
 #
@@ -18,14 +17,7 @@ if [ -n "$arg" ] && [ -f "$arg" ]; then
 elif [ -n "$arg" ] && [ -f "$here/firmware-rp2040/do52pro_trackpoint_${arg}.uf2" ]; then
     uf2="$here/firmware-rp2040/do52pro_trackpoint_${arg}.uf2"
 elif [ -z "$arg" ]; then
-    # Prefer VIA: it is a superset of the default keymap and is what the board
-    # normally runs. Pass "default" to flash the non-VIA build.
-    preferred="$here/firmware-rp2040/do52pro_trackpoint_via.uf2"
-    if [ -f "$preferred" ]; then
-        uf2=$preferred
-    else
-        uf2=$(ls -t "$here"/firmware-rp2040/*.uf2 2>/dev/null | head -1 || true)
-    fi
+    uf2=$(ls -t "$here"/firmware-rp2040/*.uf2 2>/dev/null | head -1 || true)
 else
     echo "No UF2 found for '$arg'. Run ./build.sh $arg first, or pass a path." >&2
     exit 1

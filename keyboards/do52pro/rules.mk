@@ -1,5 +1,9 @@
 SERIAL_DRIVER = vendor
 
+# VIA protocol + dynamic keymap. There is a single keymap (default), so VIA is
+# enabled for the keyboard instead of through a separate keymaps/via wrapper.
+VIA_ENABLE = yes
+
 EXTRAKEY_ENABLE = yes
 
 # KC_BTN1..3 need MOUSEKEY_ENABLE; PS2_MOUSE_ENABLE alone only moves the pointer.

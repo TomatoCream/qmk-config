@@ -15,7 +15,7 @@ QMK checkout itself stays outside this repo.
 ├── via-export.sh               VIA backup JSON -> keymap.c
 ├── format-keymap.py            reflow LAYOUT_5x6 calls into a visual grid
 ├── flake.nix / flake.lock      qmk + arm-none-eabi toolchain
-├── keyboards/do52pro/          QMK keyboard definition + default/via keymaps
+├── keyboards/do52pro/          QMK keyboard definition + default keymap
 │   └── via/do52pro.json        VIA draft definition (Design tab)
 ├── patches/                    PS/2 PIO pin-order backport
 ├── qmk_firmware/               QMK source (git submodule, pinned)
@@ -46,8 +46,7 @@ uninitialized. =build.sh= uses =./qmk_firmware= by default.
 * Build
 
 #+begin_src bash
-./build.sh                 # default keymap
-./build.sh dvorak          # other keymap directory
+./build.sh                 # VIA-enabled default keymap
 QMK_HOME=/path/to/qmk_firmware ./build.sh
 #+end_src
 
@@ -74,17 +73,15 @@ keycode order is untouched.
 ./format-keymap.py keymap.generated.c    # after via-export.sh
 #+end_src
 
-Files without a =LAYOUT_5x6= call (for example =keymaps/via/keymap.c=, which
-just includes the default keymap) are left alone. =--check= exits non-zero if
-a file would change.
+Files without a =LAYOUT_5x6= call are left alone. =--check= exits non-zero if a
+file would change.
 
 * Flash
 
 #+begin_src bash
-./flash.sh                 # VIA build if present, else newest UF2
-./flash.sh via             # explicit keymap name
-./flash.sh default         # non-VIA build
-./flash.sh firmware-rp2040/do52pro_trackpoint_via.uf2
+./flash.sh                 # newest UF2 in firmware-rp2040/
+./flash.sh default         # explicit keymap name
+./flash.sh firmware-rp2040/do52pro_trackpoint_default.uf2
 #+end_src
 
 Put one half in BOOTSEL (double-tap RESET, or hold BOOT while plugging USB),
@@ -97,11 +94,11 @@ both halves.
 
 * VIA
 
-The =via= keymap enables QMK's VIA protocol and dynamic keymap. Build and
-flash it once:
+The default keymap is built with QMK's VIA protocol and dynamic keymap
+(=VIA_ENABLE = yes= in =keyboards/do52pro/rules.mk=). Build and flash once:
 
 #+begin_src bash
-./build.sh via
+./build.sh
 ./flash.sh
 #+end_src
 
