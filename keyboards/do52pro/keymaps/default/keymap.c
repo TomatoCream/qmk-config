@@ -88,17 +88,17 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     // Layer 3: upper_layer (symbols)
     [3] = LAYOUT_5x6(
         // Left rows 0-4
-        KC_GRV, KC_NO,      KC_NO,      KC_NO,   KC_NO,         KC_NO,
-        KC_TAB, KC_NO,      KC_NO,      KC_LCBR, KC_RCBR,       KC_NO,
-        KC_NO,  KC_NO,      KC_NO,      KC_LPRN, KC_RPRN,       KC_NO,
-        KC_NO,  KC_NO,      KC_NO,      KC_LPRN, KC_RPRN,       KC_NO,
-        KC_NO,  TG(2),      KC_NO,      KC_NO,   KC_SPC,        KC_NO,
+        LSFT(KC_GRV), KC_NO,      KC_NO,      KC_NO,   KC_NO,         KC_NO,
+        KC_GRV,       KC_NO,      KC_NO,      KC_LCBR, KC_RCBR,       KC_NO,
+        KC_NO,        KC_NO,      KC_NO,      KC_LPRN, KC_RPRN,       KC_NO,
+        KC_NO,        KC_NO,      KC_NO,      KC_LPRN, KC_RPRN,       KC_NO,
+        KC_NO,        TG(2),      KC_NO,      KC_NO,   KC_SPC,        KC_NO,
         // Right rows 6-10
-        KC_NO,  KC_NO,      KC_NO,      KC_MINS, KC_EQL,        KC_BSLS,
-        KC_NO,  KC_LBRC,    KC_RBRC,    KC_NO,   LSFT(KC_MINS), KC_PEQL,
-        KC_NO,  LSFT(KC_9), LSFT(KC_0), KC_NO,   KC_PMNS,       KC_PPLS,
-        KC_NO,  KC_LCBR,    KC_RCBR,    KC_NO,   KC_NO,         QK_BOOT,
-        KC_NO,  KC_SPC,     KC_NO,      KC_NO,   KC_NO,         KC_NO,
+        KC_NO,        KC_NO,      KC_NO,      KC_MINS, KC_EQL,        KC_BSLS,
+        KC_NO,        KC_LBRC,    KC_RBRC,    KC_NO,   LSFT(KC_MINS), KC_PEQL,
+        KC_NO,        LSFT(KC_9), LSFT(KC_0), KC_NO,   KC_PMNS,       KC_PPLS,
+        KC_NO,        KC_LCBR,    KC_RCBR,    KC_NO,   KC_NO,         QK_BOOT,
+        KC_NO,        KC_SPC,     KC_NO,      KC_NO,   KC_NO,         KC_NO,
         // Left DPAD
         KC_NO, KC_NO, KC_NO, KC_NO,
         // Right DPAD
