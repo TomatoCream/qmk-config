@@ -49,8 +49,14 @@ the keyboard overlay, keymaps, VIA definitions, and tooling live here.
   keycode values, so `KC_LCBR` == `LSFT(KC_LBRC)` and `KC_RIGHT` == `KC_RGHT`; only
   differing arguments are replaced, preserving comments, formatting, and
   `process_record_user()`.
-- The dynamic keymap has 4 VIA layers; the C keymap has 3. The 4th is transparent
-  and ignored by `via-pull`.
+- The dynamic keymap has 4 VIA layers and the C keymap fills all four: 0 =
+  Dvorak base, 1 = symbols, 2 = F-keys/reset (unreachable from 0/1), 3 =
+  QWERTY letter overlay. All four are pulled by `via-pull.sh`.
+- Layer 0 is Dvorak (`' , . p y / a o e u i / ; q j k x / f g c r l / d h t n s
+  / b m w v z` on the 30 letter positions). Caps Lock is `TG(3)`, toggling
+  layer 3, which overrides only those 30 letter positions with QWERTY and is
+  `KC_TRNS` elsewhere — never duplicate non-letter keys into layer 3. Raw
+  keycode for VIA's *Any* field: `TG(3)` = `0x5263`.
 - Raw HID discovery filters USB ID `0x594B:0x0D52`; other VIA keyboards (the
   Keychron V10 at `0x3434:0x03A1`) are ignored.
 - `format-keymap.py` replaces comments inside `LAYOUT_5x6(...)` with group
@@ -64,7 +70,11 @@ the keyboard overlay, keymaps, VIA definitions, and tooling live here.
 
 - The EEPROM dynamic keymap is seeded from `keymap.c` only on first boot. Flashing
   does not clear it. To clear and enter BOOTSEL, hold the right half's `6`
-  (`[6,0]`) while plugging in.
+  (`[6,0]`) while plugging in. A layer only present in the C keymap (e.g. the
+  QWERTY overlay) stays all-`KC_TRNS` in the EEPROM until it is cleared, so the
+  new `TG(3)` appears to do nothing — and `via-pull.sh` would then write those
+  `KC_TRNS` back into `keymap.c`. Clear the EEPROM before pulling after any
+  keymap.c layer change.
 - USB must be on the right half (`MASTER_RIGHT`); connect TRRS before USB.
 - `flash.sh` needs BOOTSEL (double-tap RESET or hold BOOT at plug-in). VIA's
   `id_bootloader_jump` is not implemented in this firmware, so there is no software

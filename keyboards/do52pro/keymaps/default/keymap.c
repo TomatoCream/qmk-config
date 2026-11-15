@@ -16,21 +16,25 @@
 //  - The physical bottom row has 5 keys/side in ZMK, but this LAYOUT_5x6
 //    only exposes 4 DPAD keys/side, so C_PP (play/pause) and K_MUTE have
 //    no slot and are dropped.
+//
+// Layer 0 is Dvorak. Caps Lock is TG(3), which overlays layer 3 (the QWERTY
+// letter positions) on top of it; press again to return to Dvorak.
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-    // Layer 0: qwerty
+    // Layer 0: dvorak -- the base layout. Caps Lock is TG(3): it swaps the
+    // 30 letter keys to QWERTY (layer 3) and back.
     [0] = LAYOUT_5x6(
         // Left rows 0-4
         KC_ESC,  KC_1,    KC_2,    KC_3,   KC_4,    KC_5,
-        KC_TAB,  KC_Q,    KC_W,    KC_E,   KC_R,    KC_T,
-        KC_CAPS, KC_A,    KC_S,    KC_D,   KC_F,    KC_G,
-        KC_LSFT, KC_Z,    KC_X,    KC_C,   KC_V,    KC_B,
+        KC_TAB,  KC_QUOT, KC_COMM, KC_DOT, KC_P,    KC_Y,
+        TG(3),   KC_A,    KC_O,    KC_E,   KC_U,    KC_I,
+        KC_LSFT, KC_SCLN, KC_Q,    KC_J,   KC_K,    KC_X,
         MO(1),   KC_LGUI, KC_NO,   KC_NO,  KC_SPC,  KC_LGUI,
         // Right rows 6-10
         KC_6,    KC_7,    KC_8,    KC_9,   KC_0,    KC_BSPC,
-        KC_Y,    KC_U,    KC_I,    KC_O,   KC_P,    KC_BSLS,
-        KC_H,    KC_J,    KC_K,    KC_L,   KC_SCLN, KC_ENT,
-        KC_N,    KC_M,    KC_COMM, KC_DOT, KC_SLSH, KC_RSFT,
+        KC_F,    KC_G,    KC_C,    KC_R,   KC_L,    KC_BSLS,
+        KC_D,    KC_H,    KC_T,    KC_N,   KC_S,    KC_ENT,
+        KC_B,    KC_M,    KC_W,    KC_V,   KC_Z,    KC_RSFT,
         KC_BTN1, KC_BTN2, KC_NO,   KC_NO,  KC_LGUI, MO(1),
         // Left DPAD
         KC_MPRV, KC_VOLU,  KC_VOLD, KC_MNXT,
@@ -75,7 +79,30 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         // Left DPAD
         KC_NO, KC_NO, KC_NO, KC_NO,
         // Right DPAD
-        KC_NO, KC_NO, KC_NO, KC_NO)};
+        KC_NO, KC_NO, KC_NO, KC_NO),
+
+    // Layer 3: qwerty letter overlay, toggled by TG(3) (Caps Lock on layer 0).
+    // Only the 30 letter keys are overridden; everything else is KC_TRNS and
+    // falls through to layer 0, so numbers, modifiers, thumbs, DPAD and mouse
+    // buttons stay defined in one place. Not a base layer: it is the 4th VIA
+    // layer, so VIA edits it directly.
+    [3] = LAYOUT_5x6(
+        // Left rows 0-4
+        KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+        KC_TRNS, KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,
+        KC_TRNS, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,
+        KC_TRNS, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,
+        KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+        // Right rows 6-10
+        KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+        KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_TRNS,
+        KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_TRNS,
+        KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_TRNS,
+        KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+        // Left DPAD
+        KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+        // Right DPAD
+        KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS)};
 
 // PS2_MOUSE_ENABLE makes quantum's register_mouse() treat mouse button
 // keycodes as pointing-device buttons and skip mousekey_send(); the legacy
