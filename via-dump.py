@@ -9,6 +9,10 @@ The JSON layout matches what VIA's "Save + Load" tab writes, so
 Layers are read over the raw HID (usage page 0xFF60) interface with the VIA
 protocol; keycodes are turned back into C expressions (KC_A, MO(1),
 LSFT(KC_9), ...) using QMK's keycode data. No VIA GUI or saved file needed.
+
+With --reset the direction is reversed: the board's dynamic keymap is reseeded
+from keymap.c (VIA's id_dynamic_keymap_reset), which is what a first boot or a
+Bootmagic EEPROM reset would do — without leaving the running firmware.
 """
 
 from __future__ import annotations
@@ -99,6 +103,11 @@ class Via:
     def layer_count(self) -> int:
         return self.transfer(bytes([0x11]))[1]
 
+    def reset(self) -> None:
+        # id_dynamic_keymap_reset: dynamic_keymap_reset() copies keymaps[] from
+        # flash into the emulated EEPROM, i.e. seeds the board from keymap.c.
+        self.transfer(bytes([0x06]))
+
     def keycode(self, layer: int, row: int, col: int) -> int:
         response = self.transfer(bytes([0x04, layer, row, col]))
         return struct.unpack(">H", response[4:6])[0]
@@ -158,7 +167,8 @@ def render_keycode(value: int, codes: dict[int, dict]) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("-o", "--output", required=True, help="VIA backup JSON to write")
+    parser.add_argument("-o", "--output", help="VIA backup JSON to write")
+    parser.add_argument("--reset", action="store_true", help="reseed the board's dynamic keymap from the firmware (keymap.c) and exit, instead of dumping")
     parser.add_argument("--qmk-home", default=os.environ.get("QMK_HOME") or str(Path(__file__).resolve().parent / "qmk_firmware"))
     parser.add_argument("--rows", type=int, default=12)
     parser.add_argument("--cols", type=int, default=6)
@@ -168,9 +178,18 @@ def main() -> int:
     parser.add_argument("--device", help="raw HID path (default: first matching usage page 0xFF60)")
     args = parser.parse_args()
 
-    codes = load_keycodes(Path(args.qmk_home))
+    if not args.reset and not args.output:
+        parser.error("-o/--output is required unless --reset is given")
+
     device = args.device or find_raw_hid(args.vid, args.pid)
     via = Via(device)
+
+    if args.reset:
+        via.reset()
+        print(f"Reseeded the dynamic keymap from the firmware on {device}", file=sys.stderr)
+        return 0
+
+    codes = load_keycodes(Path(args.qmk_home))
 
     layers = []
     for layer in range(via.layer_count()):

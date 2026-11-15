@@ -20,7 +20,8 @@ the keyboard overlay, keymaps, VIA definitions, and tooling live here.
   positions in `keyboards/do52pro/keymaps/default/keymap.c`; `--check` reports and
   exits 1 when there are changes.
 - `./via-dump.py -o out.json` — raw EEPROM to VIA backup JSON. Options: `--rows`,
-  `--cols`, `--vid`, `--pid`, `--device`, `--qmk-home`.
+  `--cols`, `--vid`, `--pid`, `--device`, `--qmk-home`; `--reset` reseeds the
+  board's dynamic keymap from the firmware (VIA cmd `0x06`) instead of dumping.
 - `./format-keymap.py <file>` / `--check` — reflow `LAYOUT_5x6(...)` calls into the
   table grid; `--check` exits non-zero if a file would change.
 - Verification: `./build.sh` and `./format-keymap.py --check
@@ -69,12 +70,13 @@ the keyboard overlay, keymaps, VIA definitions, and tooling live here.
 ## Gotchas
 
 - The EEPROM dynamic keymap is seeded from `keymap.c` only on first boot. Flashing
-  does not clear it. To clear and enter BOOTSEL, hold the right half's `6`
-  (`[6,0]`) while plugging in. A layer only present in the C keymap (e.g. the
-  QWERTY overlay) stays all-`KC_TRNS` in the EEPROM until it is cleared, so the
-  new `TG(3)` appears to do nothing — and `via-pull.sh` would then write those
-  `KC_TRNS` back into `keymap.c`. Clear the EEPROM before pulling after any
-  keymap.c layer change.
+  does not clear it; after flashing a `keymap.c` change run
+  `./via-dump.py --reset` (VIA cmd `0x06` over raw HID, no BOOTSEL). A layer only
+  present in the C keymap (e.g. the QWERTY overlay) stays all-`KC_TRNS` in the
+  EEPROM until then, so the new `TG(3)` would appear to do nothing — and
+  `via-pull.sh` would write those `KC_TRNS` back into `keymap.c`. Both reseed
+  paths discard VIA-only remaps, so run `./via-pull.sh` first to keep them.
+  Bootmagic fallback: hold the right half's `6` (`[6,0]`) while plugging in.
 - USB must be on the right half (`MASTER_RIGHT`); connect TRRS before USB.
 - `flash.sh` needs BOOTSEL (double-tap RESET or hold BOOT at plug-in). VIA's
   `id_bootloader_jump` is not implemented in this firmware, so there is no software

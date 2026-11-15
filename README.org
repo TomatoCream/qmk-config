@@ -194,13 +194,21 @@ dump are left alone, and a dumped layer with non-transparent keys beyond the
 last C layer is reported instead of appended.
 
 ** EEPROM
-The dynamic keymap is seeded from =keymap.c= only on first boot. If you change
-the C keymap and reflash, clear EEPROM first. With =MASTER_RIGHT= the master is
-the right half, and Bootmagic's default =[0,0]= is that half's top-left key —
-hold the right half's =6= key (global matrix =[6,0]=) while plugging in. The
-keyboard resets EEPROM and jumps to the RP2040 bootloader. Otherwise the old
-VIA layout stays in the EEPROM. Normal UF2 reflashing does not touch the 8 KB
-wear-leveled EEPROM area at the top of flash.
+The dynamic keymap is seeded from =keymap.c= only on first boot; normal UF2
+reflashing does not touch the 8 KB wear-leveled EEPROM area at the top of
+flash. After flashing a =keymap.c= change, reseed the board over raw HID —
+no BOOTSEL, no unplugging, the running firmware exposes VIA's
+=id_dynamic_keymap_reset=:
+
+#+begin_src bash
+./via-dump.py --reset
+#+end_src
+
+Both this and a Bootmagic reset discard VIA-only edits, so run
+=./via-pull.sh= first if the EEPROM holds remaps you want in =keymap.c=.
+Bootmagic is the fallback: with =MASTER_RIGHT= the master is the right half,
+whose top-left key is the global =[6,0]= — hold the right half's =6= while
+plugging in to reset the EEPROM and jump to the RP2040 bootloader.
 
 * Hardware facts
 
