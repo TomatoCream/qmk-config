@@ -70,11 +70,11 @@ keycode order is untouched.
 #+begin_src bash
 ./format-keymap.py keyboards/do52pro/keymaps/default/keymap.c
 ./format-keymap.py --check keyboards/do52pro/keymaps/default/keymap.c
-./format-keymap.py keymap.generated.c    # after via-export.sh
 #+end_src
 
-Files without a =LAYOUT_5x6= call are left alone. =--check= exits non-zero if a
-file would change.
+=via-export.sh= runs the formatter on its generated C automatically, so a VIA
+dump already comes out on the same grid. Files without a =LAYOUT_5x6= call are
+left alone. =--check= exits non-zero if a file would change.
 
 * Flash
 
@@ -135,10 +135,11 @@ test without the keyboard attached:
 ./via-export.sh keyboards/do52pro/via/do52pro-live.layout.json
 #+end_src
 
-The script runs =qmk via2json= then =qmk json2c=: VIA stores layers in matrix
-order (12×6), and =via2json= maps them back to =LAYOUT_5x6= order. The output
-is generated C: comments are gone and the transparent 4th layer is included;
-trim or edit before committing.
+The script runs =qmk via2json=, =qmk json2c=, then =format-keymap.py=: VIA
+stores layers in matrix order (12×6), =via2json= maps them back to
+=LAYOUT_5x6= order, and the formatter lays the result out on the same grid as
+=keymap.c=. Hand-written comments are still lost and the transparent 4th layer
+is included; trim or edit before committing.
 
 ** EEPROM
 The dynamic keymap is seeded from =keymap.c= only on first boot. If you change

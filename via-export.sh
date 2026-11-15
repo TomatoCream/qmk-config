@@ -6,8 +6,10 @@
 #   QMK_HOME=/path/to/qmk_firmware ./via-export.sh backup.json
 #
 # VIA stores layers in matrix order (12x6). `qmk via2json` maps them back to the
-# LAYOUT_5x6 argument order, `qmk json2c` writes the C table. Review the result
-# (it drops the comments in keymap.c) before replacing the default keymap.
+# LAYOUT_5x6 argument order, `qmk json2c` writes the C table, and
+# format-keymap.py reflows that table into the same grid as keymap.c. Review
+# the result (it still loses the hand-written comments) before replacing the
+# default keymap.
 set -euo pipefail
 
 here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
@@ -40,5 +42,6 @@ ln -sfn "$here/keyboards/$keyboard" "$kb_link"
 cd "$QMK_HOME"
 qmk via2json -q -kb "$keyboard" -km via -l "$layout" -o "$keymap_json" "$backup"
 qmk json2c -q -o "$out" "$keymap_json"
+"$here/format-keymap.py" "$out"
 
 echo "Wrote $out"
