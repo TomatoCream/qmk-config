@@ -34,8 +34,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_BTN1, KC_BTN2, KC_NO,   KC_NO,  KC_LGUI, MO(1),
         // Left DPAD
         KC_MPRV, KC_VOLD,  KC_VOLU, KC_MNXT,
+        // LEFT DOWN UP RIGHT
         // Right DPAD
         KC_LEFT, KC_RIGHT, KC_DOWN, KC_UP),
+        // LEFT RIGHT DOWN UP
 
     // Layer 1: upper_layer (symbols)
     [1] = LAYOUT_5x6(
