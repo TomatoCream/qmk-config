@@ -1,0 +1,78 @@
+# AGENTS.md
+
+## Overview
+
+QMK config for the DO52 Pro (RP2040 split, TrackPoint) plus a VIA draft
+definition for the Keychron V10. The QMK checkout is a pinned submodule; only
+the keyboard overlay, keymaps, VIA definitions, and tooling live here.
+
+## Commands
+
+- `./build.sh [keymap]` — symlink the overlay into `qmk_firmware`, apply the PS/2
+  patch, compile, copy the UF2 to `firmware-rp2040/`. Keymap defaults to `default`.
+- `./flash.sh [keymap|file.uf2]` — wait for the `RPI-RP2` BOOTSEL volume, then copy
+  the newest UF2. BOOTSEL entry is physical.
+- `./via-export.sh` — dump the running DO52 Pro's VIA EEPROM over raw HID and write
+  formatted `./keymap.generated.c`.
+- `./via-export.sh <via-backup.json> [out.c]` — convert a VIA *Save + Load* backup
+  instead of the live EEPROM.
+- `./via-pull.sh [do52|do52pro] [--check]` — dump the EEPROM and patch only changed
+  positions in `keyboards/do52pro/keymaps/default/keymap.c`; `--check` reports and
+  exits 1 when there are changes.
+- `./via-dump.py -o out.json` — raw EEPROM to VIA backup JSON. Options: `--rows`,
+  `--cols`, `--vid`, `--pid`, `--device`, `--qmk-home`.
+- `./format-keymap.py <file>` / `--check` — reflow `LAYOUT_5x6(...)` calls into the
+  table grid; `--check` exits non-zero if a file would change.
+- Verification: `./build.sh` and `./format-keymap.py --check
+  keyboards/do52pro/keymaps/default/keymap.c`.
+
+## Layout
+
+- `keyboards/do52pro/` — QMK keyboard definition, `keymaps/default/keymap.c`,
+  `via/do52pro.json` (VIA Design-tab definition), `via/do52pro-live.layout.json`
+  (committed snapshot for offline converter tests).
+- `keyboards/keychron-v10/via/` — VIA Design-tab definition only. QMK hardware is
+  upstream `keychron/v10/ansi_encoder` (`LAYOUT_ansi_89`, USB `3434:03A1`); VIA
+  already knows the stock board.
+- `qmk_firmware/` — pinned QMK submodule; `build.sh` removes its symlink and reverts
+  the PS/2 patch after every build.
+- `via-export.sh`, `via-dump.py`, `via-merge.py`, `via-pull.sh`,
+  `format-keymap.py` — keymap tooling. `flash.sh`/`build.sh` do not use the VIA
+  definitions.
+
+## Conventions
+
+- `keymap.c` is source; VIA writes only the EEPROM. After remapping in VIA, run
+  `./via-pull.sh`; do not hand-copy the generated table.
+- `via-pull` maps positions by `LAYOUT_5x6` argument index: argument N is the same
+  physical key in every layer (`keyboard.json` layout order). It compares resolved
+  keycode values, so `KC_LCBR` == `LSFT(KC_LBRC)` and `KC_RIGHT` == `KC_RGHT`; only
+  differing arguments are replaced, preserving comments, formatting, and
+  `process_record_user()`.
+- The dynamic keymap has 4 VIA layers; the C keymap has 3. The 4th is transparent
+  and ignored by `via-pull`.
+- Raw HID discovery filters USB ID `0x594B:0x0D52`; other VIA keyboards (the
+  Keychron V10 at `0x3434:0x03A1`) are ignored.
+- `format-keymap.py` replaces comments inside `LAYOUT_5x6(...)` with group
+  headings; keep notes outside the calls.
+- `KC_BTN1..8` are transmitted by `process_record_user()` in `keymap.c` because
+  `PS2_MOUSE_ENABLE` makes QMK skip `mousekey_send()`. `ps2_mouse_moved_user()` in
+  `do52pro.c` merges held buttons into TrackPoint movement reports so drag works.
+- VIA definition `vendorId`/`productId` must match `config.h` (`0x594B:0x0D52`).
+
+## Gotchas
+
+- The EEPROM dynamic keymap is seeded from `keymap.c` only on first boot. Flashing
+  does not clear it. To clear and enter BOOTSEL, hold the right half's `6`
+  (`[6,0]`) while plugging in.
+- USB must be on the right half (`MASTER_RIGHT`); connect TRRS before USB.
+- `flash.sh` needs BOOTSEL (double-tap RESET or hold BOOT at plug-in). VIA's
+  `id_bootloader_jump` is not implemented in this firmware, so there is no software
+  reset.
+- After flashing, unplug/replug to power-cycle the TrackPoint.
+- `build.sh` re-execs into `nix develop` when `arm-none-eabi-gcc` is missing;
+  `QMK_HOME` overrides the QMK checkout.
+- `via-dump.py` needs `$QMK_HOME/data/constants/keycodes`; unknown keycodes fall
+  back to raw `0xNNNN` C literals.
+- `via/do52pro-live.layout.json` is a snapshot, not the live state; use
+  `./via-export.sh` (no argument) for the board's current keymap.
