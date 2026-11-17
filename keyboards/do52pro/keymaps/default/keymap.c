@@ -37,7 +37,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_B,    KC_M,    KC_W,    KC_V,   KC_Z,    KC_RSFT,
         KC_BTN1, KC_BTN2, KC_NO,   KC_NO,  KC_LGUI, MO(3),
         // Left DPAD
-        KC_MPRV, KC_VOLU,  KC_VOLD, KC_MNXT,
+        KC_LALT, KC_VOLU,  KC_VOLD, KC_BRIU,
         // Right DPAD
         KC_LEFT, KC_RIGHT, KC_DOWN, KC_UP),
         // Left DPAD: LEFT DOWN UP RIGHT
@@ -91,18 +91,18 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         LSFT(KC_GRV), KC_NO,      KC_NO,      KC_NO,   KC_NO,         KC_NO,
         KC_GRV,       KC_NO,      KC_NO,      KC_LCBR, KC_RCBR,       KC_NO,
         KC_NO,        KC_NO,      KC_NO,      KC_LPRN, KC_RPRN,       KC_NO,
-        KC_NO,        KC_NO,      KC_NO,      KC_LPRN, KC_RPRN,       KC_NO,
+        KC_LSFT,      KC_NO,      KC_NO,      KC_LPRN, KC_RPRN,       KC_NO,
         KC_NO,        TG(2),      KC_NO,      KC_NO,   KC_SPC,        KC_NO,
         // Right rows 6-10
         KC_NO,        KC_NO,      KC_NO,      KC_MINS, KC_EQL,        KC_BSLS,
         KC_NO,        KC_LBRC,    KC_RBRC,    KC_NO,   LSFT(KC_MINS), KC_PEQL,
-        KC_NO,        LSFT(KC_9), LSFT(KC_0), KC_NO,   KC_PMNS,       KC_PPLS,
+        KC_NO,        LSFT(KC_9), LSFT(KC_0), KC_NO,   KC_PPLS,       KC_PMNS,
         KC_NO,        KC_LCBR,    KC_RCBR,    KC_NO,   KC_NO,         QK_BOOT,
-        KC_NO,        KC_SPC,     KC_NO,      KC_NO,   KC_NO,         KC_NO,
+        KC_NO,        KC_BTN3,    KC_NO,      KC_NO,   KC_NO,         KC_NO,
         // Left DPAD
-        KC_NO, KC_NO, KC_NO, KC_NO,
+        KC_NO, KC_BRIU, KC_BRID, KC_NO,
         // Right DPAD
-        KC_NO, KC_NO, KC_NO, KC_NO)};
+        KC_NO, KC_NO,   KC_WH_D, KC_WH_U)};
 
 // PS2_MOUSE_ENABLE makes quantum's register_mouse() treat mouse button
 // keycodes as pointing-device buttons and skip mousekey_send(); the legacy
