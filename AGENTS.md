@@ -48,14 +48,22 @@ Default target is the DO52 Pro (12×6, USB `0x594B:0x0D52`): `build`, `flash`,
 - `keyboards/keychron-v10/via/` — VIA Design-tab definition plus
   `keychron-v10-live.keymap.json`, a snapshot of the board's dynamic keymap
   (4 layers, 6×16). QMK hardware is upstream `keychron/v10/ansi_encoder`
-  (`LAYOUT_ansi_89`, USB `3434:03A1`); VIA already knows the stock board. The
-  board's keymap lives in its EEPROM — this repo holds no V10 `keymap.c`.
+  (`LAYOUT_ansi_89`, USB `3434:03A1`); VIA already knows the stock board.
   Layer 0 (Mac base) and layer 2 (Windows base, selected by the rear Mac/Win
-  slider) both carry Dvorak letters; layers 1 and 3 are the Fn layers.
+  slider) both carry QWERTY letters; layers 1 and 3 are the Fn layers.
   Re-apply the snapshot over raw HID with
   `./kb apply keyboards/keychron-v10/via/keychron-v10-live.keymap.json
   --vid 0x3434 --pid 0x03A1 --rows 6 --cols 16`; re-dump it after remapping in
-  VIA.
+  VIA with `./kb dump -o
+  keyboards/keychron-v10/via/keychron-v10-live.keymap.json --vid 0x3434
+  --pid 0x03A1 --rows 6 --cols 16 --name keychron-v10` (`--name` defaults to
+  the DO52 Pro).
+- `keyboards/keychron-v10/keymaps/via/keymap.c` — custom 5-layer V10 keymap
+  (Dvorak Mac/Windows bases, Fn layers, and a QWERTY letter overlay on layer 4
+  toggled by `TG(4)` on the M4 macro key). `./kb` does not build it; flash it
+  with QMK upstream. The board's dynamic keymap lives in EEPROM and is seeded
+  from the firmware only on first boot, so reseed after flashing with
+  `./kb dump --reset --vid 0x3434 --pid 0x03A1 --rows 6 --cols 16`.
 - `qmk_firmware/` — pinned QMK submodule; `kb build` removes its symlink and reverts
   the PS/2 patch after every build.
 - `kb` — single CLI; subcommands `build`/`flash`/`export`/`pull` live in it,
